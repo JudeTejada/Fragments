@@ -1,59 +1,5 @@
 import * as React from 'react';
-import type { Snippet, Tag } from '@shared/types';
-
-// Mock data for UI development - will be replaced with IPC calls
-const MOCK_SNIPPETS: Snippet[] = [
-  {
-    id: '1',
-    title: 'React useState Hook',
-    language: 'typescript',
-    content: `const [count, setCount] = useState(0);
-
-// Increment the count
-const handleClick = () => {
-  setCount(prev => prev + 1);
-};`,
-    notes: 'Basic example of using the useState hook in React',
-    createdAt: '2024-12-15T10:00:00Z',
-    updatedAt: '2024-12-16T10:00:00Z',
-    tags: [{ id: '1', name: 'react' }, { id: '2', name: 'hooks' }],
-  },
-  {
-    id: '2',
-    title: 'Python List Comprehension',
-    language: 'python',
-    content: `# Filter and transform in one line
-squares = [x**2 for x in range(10) if x % 2 == 0]
-print(squares)  # [0, 4, 16, 36, 64]`,
-    notes: 'List comprehension with filtering',
-    createdAt: '2024-12-14T08:00:00Z',
-    updatedAt: '2024-12-14T08:00:00Z',
-    tags: [{ id: '3', name: 'python' }],
-  },
-  {
-    id: '3',
-    title: 'Flexbox Centering',
-    language: 'css',
-    content: `.container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}`,
-    notes: 'Perfect centering with flexbox',
-    createdAt: '2024-12-13T15:00:00Z',
-    updatedAt: '2024-12-13T15:00:00Z',
-    tags: [{ id: '4', name: 'css' }, { id: '5', name: 'layout' }],
-  },
-];
-
-const MOCK_TAGS: Tag[] = [
-  { id: '1', name: 'react', count: 1 },
-  { id: '2', name: 'hooks', count: 1 },
-  { id: '3', name: 'python', count: 1 },
-  { id: '4', name: 'css', count: 1 },
-  { id: '5', name: 'layout', count: 1 },
-];
+import type { Snippet, Tag, CreateSnippetPayload, UpdateSnippetPayload } from '@shared/types';
 
 interface SnippetContextType {
   // State
@@ -63,6 +9,8 @@ interface SnippetContextType {
   selectedTagIds: string[];
   searchQuery: string;
   isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
 
   // Computed
   selectedSnippet: Snippet | null;
@@ -72,9 +20,10 @@ interface SnippetContextType {
   setSelectedSnippetId: (id: string | null) => void;
   setSelectedTagIds: (ids: string[]) => void;
   setSearchQuery: (query: string) => void;
-  createSnippet: () => void;
-  updateSnippet: (snippet: Partial<Snippet> & { id: string }) => void;
-  deleteSnippet: (id: string) => void;
+  createSnippet: () => Promise<void>;
+  updateSnippet: (update: Partial<Snippet> & { id: string }) => Promise<void>;
+  deleteSnippet: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const SnippetContext = React.createContext<SnippetContextType | null>(null);
@@ -88,19 +37,66 @@ export function useSnippetContext() {
 }
 
 export function SnippetProvider({ children }: { children: React.ReactNode }) {
-  const [snippets, setSnippets] = React.useState<Snippet[]>(MOCK_SNIPPETS);
-  const [tags] = React.useState<Tag[]>(MOCK_TAGS);
-  const [selectedSnippetId, setSelectedSnippetId] = React.useState<string | null>(MOCK_SNIPPETS[0]?.id ?? null);
+  const [snippets, setSnippets] = React.useState<Snippet[]>([]);
+  const [tags, setTags] = React.useState<Tag[]>([]);
+  const [selectedSnippetId, setSelectedSnippetId] = React.useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [isLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch snippets from API
+  const fetchSnippets = React.useCallback(async () => {
+    try {
+      const result = await window.api.snippets.list();
+      if (result.success && result.data) {
+        setSnippets(result.data);
+        // Select first snippet if none selected
+        if (!selectedSnippetId && result.data.length > 0) {
+          setSelectedSnippetId(result.data[0].id);
+        }
+      } else {
+        setError(result.error || 'Failed to fetch snippets');
+      }
+    } catch (err) {
+      setError(String(err));
+    }
+  }, [selectedSnippetId]);
+
+  // Fetch tags from API
+  const fetchTags = React.useCallback(async () => {
+    try {
+      const result = await window.api.tags.list();
+      if (result.success && result.data) {
+        setTags(result.data);
+      } else {
+        setError(result.error || 'Failed to fetch tags');
+      }
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  // Refresh all data
+  const refreshData = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    await Promise.all([fetchSnippets(), fetchTags()]);
+    setIsLoading(false);
+  }, [fetchSnippets, fetchTags]);
+
+  // Initial data load
+  React.useEffect(() => {
+    refreshData();
+  }, []);
 
   // Computed: selected snippet
   const selectedSnippet = React.useMemo(() => {
     return snippets.find(s => s.id === selectedSnippetId) ?? null;
   }, [snippets, selectedSnippetId]);
 
-  // Computed: filtered snippets
+  // Computed: filtered snippets (client-side filtering for immediate feedback)
   const filteredSnippets = React.useMemo(() => {
     let result = snippets;
 
@@ -125,37 +121,94 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
   }, [snippets, searchQuery, selectedTagIds]);
 
   // Actions
-  const createSnippet = React.useCallback(() => {
-    const newSnippet: Snippet = {
-      id: crypto.randomUUID(),
-      title: 'Untitled Snippet',
-      language: 'plaintext',
-      content: '',
-      notes: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    };
-    setSnippets(prev => [newSnippet, ...prev]);
-    setSelectedSnippetId(newSnippet.id);
-  }, []);
+  const createSnippet = React.useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const payload: CreateSnippetPayload = {
+        title: 'Untitled Snippet',
+        language: 'plaintext',
+        content: '',
+        notes: '',
+        tags: [],
+      };
 
-  const updateSnippet = React.useCallback((update: Partial<Snippet> & { id: string }) => {
-    setSnippets(prev =>
-      prev.map(s =>
-        s.id === update.id
-          ? { ...s, ...update, updatedAt: new Date().toISOString() }
-          : s
-      )
-    );
-  }, []);
+      const result = await window.api.snippets.create(payload);
 
-  const deleteSnippet = React.useCallback((id: string) => {
-    setSnippets(prev => prev.filter(s => s.id !== id));
-    if (selectedSnippetId === id) {
-      setSelectedSnippetId(snippets.find(s => s.id !== id)?.id ?? null);
+      if (result.success && result.data) {
+        // Add to local state immediately
+        setSnippets(prev => [result.data!, ...prev]);
+        setSelectedSnippetId(result.data.id);
+        // Refresh tags in case counts changed
+        fetchTags();
+      } else {
+        setError(result.error || 'Failed to create snippet');
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
     }
-  }, [selectedSnippetId, snippets]);
+  }, [fetchTags]);
+
+  const updateSnippet = React.useCallback(async (update: Partial<Snippet> & { id: string }) => {
+    setIsSaving(true);
+    try {
+      const payload: UpdateSnippetPayload = {
+        id: update.id,
+        title: update.title,
+        language: update.language,
+        content: update.content,
+        notes: update.notes ?? undefined,
+        tags: update.tags?.map(t => t.name),
+      };
+
+      const result = await window.api.snippets.update(payload);
+
+      if (result.success && result.data) {
+        // Update local state immediately
+        setSnippets(prev =>
+          prev.map(s => s.id === update.id ? result.data! : s)
+        );
+        // Refresh tags in case counts changed (if tags were updated)
+        if (update.tags !== undefined) {
+          fetchTags();
+        }
+      } else {
+        setError(result.error || 'Failed to update snippet');
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchTags]);
+
+  const deleteSnippet = React.useCallback(async (id: string) => {
+    setIsSaving(true);
+    try {
+      const result = await window.api.snippets.delete(id);
+
+      if (result.success) {
+        // Remove from local state
+        setSnippets(prev => prev.filter(s => s.id !== id));
+
+        // Select another snippet if the deleted one was selected
+        if (selectedSnippetId === id) {
+          const remaining = snippets.filter(s => s.id !== id);
+          setSelectedSnippetId(remaining[0]?.id ?? null);
+        }
+
+        // Refresh tags as counts may have changed
+        fetchTags();
+      } else {
+        setError(result.error || 'Failed to delete snippet');
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedSnippetId, snippets, fetchTags]);
 
   const value: SnippetContextType = {
     snippets,
@@ -164,6 +217,8 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     selectedTagIds,
     searchQuery,
     isLoading,
+    isSaving,
+    error,
     selectedSnippet,
     filteredSnippets,
     setSelectedSnippetId,
@@ -172,6 +227,7 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     createSnippet,
     updateSnippet,
     deleteSnippet,
+    refreshData,
   };
 
   return (
@@ -180,3 +236,4 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     </SnippetContext.Provider>
   );
 }
+

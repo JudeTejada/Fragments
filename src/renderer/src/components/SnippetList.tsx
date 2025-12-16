@@ -3,8 +3,9 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
-import { Code2, Plus, FileCode } from 'lucide-react';
+import { Code2, Plus, FileCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
@@ -69,6 +70,21 @@ function SnippetRow({ title, language, tags, updatedAt, isSelected, onClick }: S
   );
 }
 
+function SnippetRowSkeleton() {
+  return (
+    <div className="w-full px-4 py-3">
+      <div className="flex flex-col gap-1.5">
+        <Skeleton className="h-4 w-3/4" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-12 ml-auto" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SnippetList() {
   const {
     filteredSnippets,
@@ -76,9 +92,11 @@ export function SnippetList() {
     setSelectedSnippetId,
     searchQuery,
     createSnippet,
+    isLoading,
+    isSaving,
   } = useSnippetContext();
 
-  const hasNoSnippets = filteredSnippets.length === 0;
+  const hasNoSnippets = filteredSnippets.length === 0 && !isLoading;
   const isSearchActive = searchQuery.trim().length > 0;
 
   return (
@@ -93,8 +111,13 @@ export function SnippetList() {
           size="icon"
           className="size-7 rounded-lg"
           onClick={createSnippet}
+          disabled={isSaving}
         >
-          <Plus className="size-4" />
+          {isSaving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
           <span className="sr-only">New Snippet</span>
         </Button>
       </div>
@@ -102,7 +125,14 @@ export function SnippetList() {
       {/* List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {hasNoSnippets ? (
+          {isLoading ? (
+            // Loading skeletons
+            <>
+              <SnippetRowSkeleton />
+              <SnippetRowSkeleton />
+              <SnippetRowSkeleton />
+            </>
+          ) : hasNoSnippets ? (
             <Empty className="border-none">
               <EmptyHeader>
                 <EmptyMedia variant="icon">

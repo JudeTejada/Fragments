@@ -1,8 +1,50 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { IPC_CHANNELS } from '../shared/channels'
+import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, Snippet, Tag } from '../shared/types'
+
+// Response type from IPC handlers
+interface IPCResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+}
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  snippets: {
+    list: (tagIds?: string[]): Promise<IPCResponse<Snippet[]>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_LIST, { tagIds }),
+
+    get: (id: string): Promise<IPCResponse<Snippet>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_GET, { id }),
+
+    create: (data: CreateSnippetPayload): Promise<IPCResponse<Snippet>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_CREATE, data),
+
+    update: (data: UpdateSnippetPayload): Promise<IPCResponse<Snippet>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_UPDATE, data),
+
+    delete: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_DELETE, { id }),
+
+    search: (params: SearchParams): Promise<IPCResponse<Snippet[]>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_SEARCH, params),
+  },
+
+  tags: {
+    list: (): Promise<IPCResponse<Tag[]>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
+  },
+
+  settings: {
+    get: (): Promise<IPCResponse<Settings>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
+
+    update: (settings: Partial<Settings>): Promise<IPCResponse<Settings>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, settings),
+  },
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
@@ -20,3 +62,4 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
 }
+

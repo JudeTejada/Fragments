@@ -10,6 +10,8 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Code2, Hash, Plus, Search } from 'lucide-react';
 import { useSnippetContext } from '@/context/SnippetContext';
@@ -40,24 +42,24 @@ export function SnippetSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="gap-3.5 border-b border-sidebar-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold text-foreground">
-            <Code2 className="size-5" />
-            <span>Snippets</span>
+            <SidebarTrigger className="-ml-1" />
+            <span className="group-data-[collapsible=icon]:hidden">Snippets</span>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="size-7 rounded-lg"
+            className="size-7 rounded-lg group-data-[collapsible=icon]:hidden"
             onClick={createSnippet}
           >
             <Plus className="size-4" />
             <span className="sr-only">New Snippet</span>
           </Button>
         </div>
-        <div className="relative">
+        <div className="relative group-data-[collapsible=icon]:hidden">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <SidebarInput
             placeholder="Search snippets..."
@@ -77,6 +79,7 @@ export function SnippetSidebar() {
                 <SidebarMenuButton
                   isActive={selectedTagIds.length === 0}
                   onClick={clearFilters}
+                  tooltip="All Snippets"
                 >
                   <Code2 className="size-4" />
                   <span>All Snippets</span>
@@ -97,6 +100,7 @@ export function SnippetSidebar() {
                   <SidebarMenuButton
                     isActive={selectedTagIds.includes(tag.id)}
                     onClick={() => handleTagClick(tag.id)}
+                    tooltip={tag.name}
                   >
                     <Hash className="size-4 text-muted-foreground" />
                     <span>{tag.name}</span>
@@ -105,7 +109,7 @@ export function SnippetSidebar() {
                 </SidebarMenuItem>
               ))}
               {tags.length === 0 && (
-                <p className="px-2 py-4 text-xs text-muted-foreground">
+                <p className="px-2 py-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                   No tags yet
                 </p>
               )}
@@ -113,6 +117,9 @@ export function SnippetSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Rail for collapse/expand interaction */}
+      <SidebarRail />
     </Sidebar>
   );
 }

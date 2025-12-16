@@ -17,13 +17,13 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Install better-sqlite3 | ⏳ | |
-| DB bootstrap on app start | ⏳ | |
-| Create migrations | ⏳ | Tables: snippets, tags, snippet_tags, settings |
-| DB path per OS | ⏳ | |
-| IPC handler setup | ⏳ | |
-| Preload API methods | ⏳ | |
-| Type definitions | ⏳ | |
+| Install better-sqlite3 | ✅ | Installed with electron-rebuild |
+| DB bootstrap on app start | ✅ | Via `initDatabase()` in main |
+| Create migrations | ✅ | Tables: snippets, tags, snippet_tags, settings |
+| DB path per OS | ✅ | Uses `app.getPath('userData')` |
+| IPC handler setup | ✅ | All CRUD handlers registered |
+| Preload API methods | ✅ | Typed API exposed to renderer |
+| Type definitions | ✅ | Updated `index.d.ts` |
 
 ---
 
@@ -31,19 +31,19 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| SnippetRepository | ⏳ | list, get, create, update, delete, search |
-| TagRepository | ⏳ | list, findOrCreateMany |
-| SettingsRepository | ⏳ | getAll, update |
-| IPC: snippets:list | ⏳ | |
-| IPC: snippets:get | ⏳ | |
-| IPC: snippets:create | ⏳ | |
-| IPC: snippets:update | ⏳ | |
-| IPC: snippets:delete | ⏳ | |
-| IPC: snippets:search | ⏳ | |
-| IPC: tags:list | ⏳ | |
-| useSnippetsList hook | ⏳ | |
-| useSnippetDetail hook | ⏳ | |
-| Mutation hooks | ⏳ | |
+| SnippetRepository | ✅ | list, get, create, update, delete, search |
+| TagRepository | ✅ | list, findOrCreateMany |
+| SettingsRepository | ✅ | getAll, update |
+| IPC: snippets:list | ✅ | |
+| IPC: snippets:get | ✅ | |
+| IPC: snippets:create | ✅ | |
+| IPC: snippets:update | ✅ | |
+| IPC: snippets:delete | ✅ | |
+| IPC: snippets:search | ✅ | |
+| IPC: tags:list | ✅ | |
+| useSnippetsList hook | ✅ | Via SnippetContext with API calls |
+| useSnippetDetail hook | ✅ | Via SnippetContext with API calls |
+| Mutation hooks | ✅ | create/update/delete via SnippetContext |
 
 ---
 
