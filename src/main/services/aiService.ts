@@ -62,10 +62,7 @@ export class AiService {
     if (backend !== 'ollama') {
       return { ok: false, message: 'AI backend is not set to Ollama.' };
     }
-    if (!settings.ollama_model_name) {
-      return { ok: false, message: 'Ollama model name not configured.' };
-    }
 
-    return testOllamaConnection(OLLAMA_BASE_URL, settings.ollama_model_name);
+    return testOllamaConnection(OLLAMA_BASE_URL, settings.ollama_model_name ?? '');
   }
 }

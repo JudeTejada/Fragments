@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initDatabase, closeDatabase } from './database/database'
 import { registerIPCHandlers } from './ipc/ipc'
+import { registerQuickCaptureShortcut, unregisterAllShortcuts } from './quickCapture'
 
 function createWindow(): void {
   // Create the browser window.
@@ -58,6 +59,7 @@ app.whenReady().then(() => {
   registerIPCHandlers()
 
   createWindow()
+  registerQuickCaptureShortcut()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -78,6 +80,10 @@ app.on('window-all-closed', () => {
 // Close database on app quit
 app.on('before-quit', () => {
   closeDatabase()
+})
+
+app.on('will-quit', () => {
+  unregisterAllShortcuts()
 })
 
 // In this file you can include the rest of your app's specific main process

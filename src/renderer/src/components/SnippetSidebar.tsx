@@ -1,3 +1,4 @@
+import * as React from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -14,19 +15,23 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Code2, Hash, Plus, Search } from 'lucide-react';
+import { Code2, Hash, Plus, Search, Star } from 'lucide-react';
 import { useSnippetContext } from '@/context/SnippetContext';
 import { Button } from '@/components/ui/button';
 import { SettingsSheet } from '@/components/SettingsSheet';
+import { cn } from '@/lib/utils';
 
 export function SnippetSidebar() {
   const {
+    snippets,
     tags,
     selectedTagIds,
     searchQuery,
     filteredSnippets,
+    showFavoritesOnly,
     setSelectedTagIds,
     setSearchQuery,
+    setShowFavoritesOnly,
     createSnippet,
   } = useSnippetContext();
 
@@ -41,7 +46,13 @@ export function SnippetSidebar() {
   const clearFilters = () => {
     setSelectedTagIds([]);
     setSearchQuery('');
+    setShowFavoritesOnly(false);
   };
+
+  const favoriteCount = React.useMemo(
+    () => snippets.filter(snippet => snippet.isFavorite).length,
+    [snippets]
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -58,7 +69,7 @@ export function SnippetSidebar() {
               variant="ghost"
               size="icon"
               className="size-7 rounded-lg"
-              onClick={createSnippet}
+              onClick={() => createSnippet()}
             >
               <Plus className="size-4" />
               <span className="sr-only">New Snippet</span>
@@ -84,7 +95,7 @@ export function SnippetSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={selectedTagIds.length === 0}
+                  isActive={!showFavoritesOnly && selectedTagIds.length === 0}
                   onClick={clearFilters}
                   tooltip="All Snippets"
                   className="transition-all duration-200 ease-out"
@@ -95,6 +106,27 @@ export function SnippetSidebar() {
                   </span>
                   <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
                     {filteredSnippets.length}
+                  </SidebarMenuBadge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={showFavoritesOnly}
+                  onClick={() => setShowFavoritesOnly(prev => !prev)}
+                  tooltip="Favorites"
+                  className="transition-all duration-200 ease-out"
+                >
+                  <Star
+                    className={cn(
+                      'size-4 shrink-0 transition-transform duration-200',
+                      showFavoritesOnly ? 'text-amber-500 fill-amber-400' : 'text-muted-foreground'
+                    )}
+                  />
+                  <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+                    Favorites
+                  </span>
+                  <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                    {favoriteCount}
                   </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -149,4 +181,3 @@ export function SnippetSidebar() {
     </Sidebar>
   );
 }
-

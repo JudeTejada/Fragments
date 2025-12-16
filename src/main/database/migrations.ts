@@ -66,5 +66,15 @@ export const MIGRATIONS = [
 
       INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_backend', '"none"');
     `
+  },
+
+  // Version 3: Favorites support for snippets
+  {
+    version: 3,
+    up: `
+      ALTER TABLE snippets ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_snippets_is_favorite ON snippets(is_favorite);
+      UPDATE snippets SET is_favorite = 0 WHERE is_favorite IS NULL;
+    `
   }
 ];

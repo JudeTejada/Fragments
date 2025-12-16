@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/compo
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen } from 'lucide-react';
+import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types';
 import { useAiForSnippet } from '@/hooks/useAiForSnippet';
@@ -33,7 +33,7 @@ const ACTION_LABELS: Record<AiActionType, string> = {
 };
 
 export function SnippetDetail() {
-  const { selectedSnippet, updateSnippet, deleteSnippet, isSaving } = useSnippetContext();
+  const { selectedSnippet, updateSnippet, deleteSnippet, toggleFavorite, isSaving } = useSnippetContext();
 
   // Local state for editing
   const [title, setTitle] = React.useState('');
@@ -131,6 +131,11 @@ export function SnippetDetail() {
     }
   };
 
+  const handleFavoriteToggle = () => {
+    if (!selectedSnippet) return;
+    toggleFavorite(selectedSnippet.id);
+  };
+
   if (!selectedSnippet) {
     return (
       <div className="flex flex-1 items-center justify-center bg-background">
@@ -161,15 +166,36 @@ export function SnippetDetail() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Snippet title..."
-                className="text-xl font-semibold border-none shadow-none px-0 h-auto bg-transparent focus-visible:ring-0"
-                unstyled
+            className="text-xl font-semibold border-none shadow-none px-0 h-auto bg-transparent focus-visible:ring-0"
+            unstyled
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant={selectedSnippet.isFavorite ? 'secondary' : 'ghost'}
+              size="icon"
+              className={cn(
+                'size-8',
+                selectedSnippet.isFavorite
+                  ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                  : 'text-muted-foreground'
+              )}
+              onClick={handleFavoriteToggle}
+            >
+              <Star
+                className={cn(
+                  'size-4',
+                  selectedSnippet.isFavorite ? 'fill-amber-400 text-amber-600' : ''
+                )}
               />
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
-                    (isSaving || showSaved) ? 'opacity-100' : 'opacity-0'
-                  )}
+              <span className="sr-only">
+                {selectedSnippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              </span>
+            </Button>
+            <span
+              className={cn(
+                'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
+                (isSaving || showSaved) ? 'opacity-100' : 'opacity-0'
+              )}
                 >
                   {isSaving ? (
                     <>

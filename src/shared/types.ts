@@ -18,6 +18,7 @@ export interface Snippet {
   language: string;
   content: string;
   notes: string | null;
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
   tags: Tag[];
@@ -33,6 +34,7 @@ export interface Settings {
   dbBackupLastPath?: string;
   ai_backend?: AiBackend;
   ollama_model_name?: string;
+  quick_capture_shortcut?: string;
 }
 
 // IPC payload types
@@ -41,6 +43,7 @@ export interface CreateSnippetPayload {
   language: string;
   content: string;
   notes?: string;
+  isFavorite?: boolean;
   tags: string[];
 }
 
@@ -50,6 +53,7 @@ export interface UpdateSnippetPayload {
   language?: string;
   content?: string;
   notes?: string;
+  isFavorite?: boolean;
   tags?: string[];
 }
 

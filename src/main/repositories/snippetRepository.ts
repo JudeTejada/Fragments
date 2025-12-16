@@ -19,6 +19,7 @@ interface SnippetRow {
   language: string;
   content: string;
   notes: string | null;
+  is_favorite: number;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +63,7 @@ export const SnippetRepository = {
       language: row.language,
       content: row.content,
       notes: row.notes,
+      isFavorite: Boolean(row.is_favorite),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       tags: SnippetRepository.getTagsForSnippet(row.id),
@@ -88,6 +90,7 @@ export const SnippetRepository = {
       language: row.language,
       content: row.content,
       notes: row.notes,
+      isFavorite: Boolean(row.is_favorite),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       tags: SnippetRepository.getTagsForSnippet(row.id),
@@ -106,9 +109,18 @@ export const SnippetRepository = {
     const transaction = db.transaction(() => {
       // Insert the snippet
       db.prepare(`
-        INSERT INTO snippets (id, title, language, content, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(id, data.title, data.language, data.content, data.notes ?? null, now, now);
+        INSERT INTO snippets (id, title, language, content, notes, is_favorite, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id,
+        data.title,
+        data.language,
+        data.content,
+        data.notes ?? null,
+        data.isFavorite ? 1 : 0,
+        now,
+        now
+      );
 
       // Handle tags
       if (data.tags && data.tags.length > 0) {
@@ -145,13 +157,14 @@ export const SnippetRepository = {
       // Update snippet fields
       db.prepare(`
         UPDATE snippets
-        SET title = ?, language = ?, content = ?, notes = ?, updated_at = ?
+        SET title = ?, language = ?, content = ?, notes = ?, is_favorite = ?, updated_at = ?
         WHERE id = ?
       `).run(
         data.title ?? existing.title,
         data.language ?? existing.language,
         data.content ?? existing.content,
         data.notes ?? existing.notes,
+        data.isFavorite !== undefined ? (data.isFavorite ? 1 : 0) : (existing.isFavorite ? 1 : 0),
         now,
         id
       );
@@ -243,6 +256,7 @@ export const SnippetRepository = {
       language: row.language,
       content: row.content,
       notes: row.notes,
+      isFavorite: Boolean(row.is_favorite),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       tags: SnippetRepository.getTagsForSnippet(row.id),

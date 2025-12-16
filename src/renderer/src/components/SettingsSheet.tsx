@@ -16,6 +16,13 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '@/c
 import { Settings, Database, Download, Loader2, Check, FolderOpen, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AiBackend } from '@shared/types';
+import { ShortcutInput } from '@/components/ShortcutInput';
+
+type SettingsUpdate = Partial<{
+  ai_backend: AiBackend;
+  ollama_model_name: string;
+  quick_capture_shortcut: string;
+}>;
 
 export function SettingsSheet() {
   const [dbPath, setDbPath] = React.useState<string>('');
@@ -27,26 +34,37 @@ export function SettingsSheet() {
   const [isSavingSettings, setIsSavingSettings] = React.useState(false);
   const [isTesting, setIsTesting] = React.useState(false);
   const [testResult, setTestResult] = React.useState<{ ok: boolean; message?: string } | null>(null);
+  const [models, setModels] = React.useState<string[]>([]);
+  const [quickCaptureShortcut, setQuickCaptureShortcut] = React.useState('');
 
   const loadSettings = React.useCallback(async () => {
     try {
       const result = await window.api.settings.get();
       if (result.success && result.data) {
-        setAiBackend((result.data.ai_backend ?? 'none') as AiBackend);
-        setOllamaModel(result.data.ollama_model_name ?? '');
+        const backend = (result.data.ai_backend ?? 'none') as AiBackend;
+        const model = result.data.ollama_model_name ?? '';
+        const shortcut = result.data.quick_capture_shortcut ?? '';
+        setAiBackend(backend);
+        setOllamaModel(model);
+        setQuickCaptureShortcut(shortcut);
+        return { backend, model, shortcut };
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
     }
+    return null;
   }, []);
 
-  const saveSettings = React.useCallback(async (partial: Partial<{ ai_backend: AiBackend; ollama_model_name: string }>) => {
+  const saveSettings = React.useCallback(async (partial: SettingsUpdate) => {
     setIsSavingSettings(true);
     try {
       const result = await window.api.settings.update(partial);
       if (result.success && result.data) {
         setAiBackend((result.data.ai_backend ?? 'none') as AiBackend);
         setOllamaModel(result.data.ollama_model_name ?? '');
+        if (result.data.quick_capture_shortcut !== undefined) {
+          setQuickCaptureShortcut(result.data.quick_capture_shortcut);
+        }
       }
     } catch (err) {
       console.error('Failed to update settings:', err);
@@ -55,6 +73,39 @@ export function SettingsSheet() {
     }
   }, []);
 
+  const fetchModels = React.useCallback(async (backendOverride?: AiBackend) => {
+    const backend = backendOverride ?? aiBackend;
+    if (backend !== 'ollama') {
+      setModels([]);
+      return;
+    }
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await window.api.ai.testConnection();
+      if (result.success && result.data) {
+        const detected = result.data.models ?? [];
+        setModels(detected);
+        if (detected.length > 0 && !ollamaModel) {
+          setOllamaModel(detected[0]);
+          await saveSettings({ ollama_model_name: detected[0] });
+        }
+        setTestResult({ ok: result.data.ok, message: result.data.message });
+      } else {
+        setModels([]);
+        setTestResult({ ok: false, message: result.error || 'Failed to test connection' });
+      }
+    } catch (err) {
+      setModels([]);
+      setTestResult({
+        ok: false,
+        message: err instanceof Error ? err.message : 'Failed to test connection',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  }, [aiBackend, ollamaModel, saveSettings]);
+
   // Load DB path on open
   const handleOpenChange = async (open: boolean) => {
     if (open) {
@@ -62,12 +113,17 @@ export function SettingsSheet() {
       setExportResult(null);
       setTestResult(null);
       try {
-        const [dbResult] = await Promise.all([
+        const [dbResult, settings] = await Promise.all([
           window.api.system.getDbPath(),
           loadSettings(),
         ]);
         if (dbResult.success && dbResult.data) {
           setDbPath(dbResult.data);
+        }
+        if (settings?.backend === 'ollama') {
+          await fetchModels(settings.backend);
+        } else {
+          setModels([]);
         }
       } catch (err) {
         console.error('Failed to get DB path:', err);
@@ -113,6 +169,7 @@ export function SettingsSheet() {
     setAiBackend(backend);
     setTestResult(null);
     await saveSettings({ ai_backend: backend });
+    await fetchModels(backend);
   };
 
   const handleModelBlur = async () => {
@@ -121,26 +178,10 @@ export function SettingsSheet() {
   };
 
   const handleTestConnection = async () => {
-    setIsTesting(true);
-    setTestResult(null);
-    try {
-      if (aiBackend === 'ollama') {
-        await saveSettings({ ollama_model_name: ollamaModel.trim() });
-      }
-      const result = await window.api.ai.testConnection();
-      if (result.success && result.data) {
-        setTestResult(result.data);
-      } else {
-        setTestResult({ ok: false, message: result.error || 'Failed to test connection' });
-      }
-    } catch (err) {
-      setTestResult({
-        ok: false,
-        message: err instanceof Error ? err.message : 'Failed to test connection',
-      });
-    } finally {
-      setIsTesting(false);
+    if (aiBackend === 'ollama') {
+      await saveSettings({ ollama_model_name: ollamaModel.trim() });
     }
+    await fetchModels();
   };
 
   return (
@@ -233,38 +274,85 @@ export function SettingsSheet() {
                 <p className="text-xs text-muted-foreground/70">
                   Creates a backup of your entire snippet library.
                 </p>
-              </div>
+            </div>
+          </div>
+
+          {/* Quick Capture */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Sparkles className="size-4" />
+              Quick capture
+            </h3>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                Global shortcut
+              </Label>
+              <ShortcutInput
+                value={quickCaptureShortcut}
+                onChange={(value) => {
+                  setQuickCaptureShortcut(value);
+                  void saveSettings({ quick_capture_shortcut: value });
+                }}
+              />
+              <p className="text-xs text-muted-foreground/70">
+                Use this shortcut to pull clipboard text into a new snippet without leaving your current app.
+              </p>
+            </div>
+          </div>
+
+          {/* AI Section */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Sparkles className="size-4" />
+              AI
+            </h3>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                AI Backend
+              </Label>
+              <Select value={aiBackend} onValueChange={handleBackendChange}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopup>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="ollama">Ollama (local)</SelectItem>
+                </SelectPopup>
+              </Select>
+              <p className="text-xs text-muted-foreground/70">
+                Use your local Ollama server at http://localhost:11434. No cloud models are used.
+              </p>
             </div>
 
-            {/* AI Section */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="size-4" />
-                AI
-              </h3>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  AI Backend
-                </Label>
-                <Select value={aiBackend} onValueChange={handleBackendChange}>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground" htmlFor="ollama-model">
+                Ollama model
+              </Label>
+              {models.length > 0 ? (
+                <Select
+                  value={ollamaModel || models[0]}
+                  onValueChange={async (value) => {
+                    if (!value) return;
+                    setOllamaModel(value);
+                    setTestResult(null);
+                    await saveSettings({ ollama_model_name: value });
+                  }}
+                  disabled={aiBackend !== 'ollama'}
+                >
                   <SelectTrigger size="sm" className="w-full">
-                    <SelectValue placeholder="Select backend" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectPopup>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="ollama">Ollama (local)</SelectItem>
+                    {models.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
                   </SelectPopup>
                 </Select>
-                <p className="text-xs text-muted-foreground/70">
-                  Use your local Ollama server at http://localhost:11434. No cloud models are used.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground" htmlFor="ollama-model">
-                  Ollama model name
-                </Label>
+              ) : (
                 <Input
                   id="ollama-model"
                   value={ollamaModel}
@@ -274,46 +362,47 @@ export function SettingsSheet() {
                   disabled={aiBackend !== 'ollama'}
                   className="text-sm"
                 />
-                <p className="text-xs text-muted-foreground/70">
-                  The model must already be available in Ollama.
-                </p>
-              </div>
+              )}
+              <p className="text-xs text-muted-foreground/70">
+                Detected models are listed automatically. If none appear, type a model name installed in Ollama.
+              </p>
+            </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestConnection}
-                  disabled={aiBackend !== 'ollama' || isTesting || isSavingSettings}
-                >
-                  {isTesting ? (
-                    <Loader2 className="size-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="size-4 mr-2" />
-                  )}
-                  Test connection
-                </Button>
-                {isSavingSettings && (
-                  <span className="text-xs text-muted-foreground">Saving…</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestConnection}
+                disabled={aiBackend !== 'ollama' || isTesting || isSavingSettings}
+              >
+                {isTesting ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="size-4 mr-2" />
                 )}
-                {testResult && (
-                  <span className={cn(
-                    "text-xs font-medium",
-                    testResult.ok ? "text-green-600" : "text-destructive"
-                  )}>
-                    {testResult.ok ? 'Connected' : 'Unable to connect'}
-                  </span>
-                )}
-              </div>
-              {testResult?.message && (
-                <p className={cn(
-                  "text-xs",
-                  testResult.ok ? "text-green-700" : "text-destructive"
+                Refresh models
+              </Button>
+              {isSavingSettings && (
+                <span className="text-xs text-muted-foreground">Saving…</span>
+              )}
+              {testResult && (
+                <span className={cn(
+                  "text-xs font-medium",
+                  testResult.ok ? "text-green-600" : "text-destructive"
                 )}>
-                  {testResult.message}
-                </p>
+                  {testResult.ok ? 'Connected' : 'Unable to connect'}
+                </span>
               )}
             </div>
+            {testResult?.message && (
+              <p className={cn(
+                "text-xs",
+                testResult.ok ? "text-green-700" : "text-destructive"
+              )}>
+                {testResult.message}
+              </p>
+            )}
+          </div>
 
             {/* About Section */}
             <div className="space-y-4 pt-4 border-t">

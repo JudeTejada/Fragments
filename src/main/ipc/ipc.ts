@@ -8,6 +8,8 @@ import { SettingsRepository } from '../repositories/settingsRepository';
 import { getDatabaseFilePath } from '../database/database';
 import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, AiActionType } from '../../shared/types';
 import { AiService } from '../services/aiService';
+import { getEffectiveSettings } from '../settingsService';
+import { registerQuickCaptureShortcut } from '../quickCapture';
 
 const aiService = new AiService();
 
@@ -132,7 +134,7 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, () => {
     try {
-      return { success: true, data: SettingsRepository.getAll() };
+      return { success: true, data: getEffectiveSettings() };
     } catch (error) {
       console.error('Error getting settings:', error);
       return { success: false, error: String(error) };
@@ -144,8 +146,11 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(IPC_CHANNELS.SETTINGS_UPDATE, (_event, args: Partial<Settings>) => {
     try {
-      const settings = SettingsRepository.update(args);
-      return { success: true, data: settings };
+      SettingsRepository.update(args);
+      if ('quick_capture_shortcut' in args) {
+        registerQuickCaptureShortcut();
+      }
+      return { success: true, data: getEffectiveSettings() };
     } catch (error) {
       console.error('Error updating settings:', error);
       return { success: false, error: String(error) };

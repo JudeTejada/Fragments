@@ -99,7 +99,7 @@ function SidebarProvider({
   }, [isMobile, setOpen]);
   // Adds a keyboard shortcut to toggle the sidebar.
   useHotkeys(
-    "cmd+b, ctrl+b",
+    "meta+b",
     (event) => {
       event.preventDefault();
       toggleSidebar();

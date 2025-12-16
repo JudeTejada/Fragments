@@ -10,7 +10,7 @@ import {
   EmptyDescription,
   EmptyContent
 } from '@/components/ui/empty'
-import { Code2, Plus, FileCode, Loader2 } from 'lucide-react'
+import { Code2, Plus, FileCode, Loader2, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -37,11 +37,12 @@ interface SnippetRowProps {
   language: string
   tags: { id: string; name: string }[]
   updatedAt: string
+  isFavorite: boolean
   isSelected: boolean
   onClick: () => void
 }
 
-function SnippetRow({ title, language, tags, updatedAt, isSelected, onClick }: SnippetRowProps) {
+function SnippetRow({ title, language, tags, updatedAt, isFavorite, isSelected, onClick }: SnippetRowProps) {
   return (
     <button
       onClick={onClick}
@@ -53,14 +54,19 @@ function SnippetRow({ title, language, tags, updatedAt, isSelected, onClick }: S
       )}
     >
       <div className="flex flex-col gap-1.5">
-        <h3
-          className={cn(
-            'font-medium text-sm truncate',
-            isSelected ? 'text-foreground' : 'text-foreground/90'
+        <div className="flex items-center gap-2">
+          <h3
+            className={cn(
+              'font-medium text-sm truncate',
+              isSelected ? 'text-foreground' : 'text-foreground/90'
+            )}
+          >
+            {title}
+          </h3>
+          {isFavorite && (
+            <Star className="size-4 text-amber-500 fill-amber-400" />
           )}
-        >
-          {title}
-        </h3>
+        </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {language}
@@ -99,6 +105,7 @@ export function SnippetList() {
     selectedSnippetId,
     setSelectedSnippetId,
     searchQuery,
+    showFavoritesOnly,
     createSnippet,
     deleteSnippet,
     isLoading,
@@ -107,6 +114,11 @@ export function SnippetList() {
 
   const hasNoSnippets = filteredSnippets.length === 0 && !isLoading
   const isSearchActive = searchQuery.trim().length > 0
+  const headerTitle = isSearchActive
+    ? (showFavoritesOnly ? 'Search Favorites' : 'Search Results')
+    : showFavoritesOnly
+      ? 'Favorites'
+      : 'All Snippets'
 
   // Handle keyboard shortcuts
   useHotkeys(
@@ -128,14 +140,17 @@ export function SnippetList() {
     <div className="flex h-full w-80 flex-col border-r border-border bg-background/50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="font-semibold text-sm text-foreground">
-          {isSearchActive ? 'Search Results' : 'All Snippets'}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-sm text-foreground">
+            {headerTitle}
+          </h2>
+          {showFavoritesOnly && <Star className="size-4 text-amber-500 fill-amber-400" />}
+        </div>
         <Button
           variant="ghost"
           size="icon"
           className="size-7 rounded-lg"
-          onClick={createSnippet}
+          onClick={() => createSnippet()}
           disabled={isSaving}
         >
           {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
@@ -159,16 +174,22 @@ export function SnippetList() {
                 <EmptyMedia variant="icon">
                   {isSearchActive ? <FileCode className="size-4" /> : <Code2 className="size-4" />}
                 </EmptyMedia>
-                <EmptyTitle>{isSearchActive ? 'No results' : 'No snippets yet'}</EmptyTitle>
+                <EmptyTitle>
+                  {isSearchActive
+                    ? showFavoritesOnly ? 'No favorite matches' : 'No results'
+                    : showFavoritesOnly ? 'No favorites yet' : 'No snippets yet'}
+                </EmptyTitle>
                 <EmptyDescription>
                   {isSearchActive
                     ? 'Try a different search term'
-                    : 'Create your first snippet to get started'}
+                    : showFavoritesOnly
+                      ? 'Mark snippets as favorites to see them here'
+                      : 'Create your first snippet to get started'}
                 </EmptyDescription>
               </EmptyHeader>
               {!isSearchActive && (
                 <EmptyContent>
-                  <Button onClick={createSnippet} size="sm">
+                  <Button onClick={() => createSnippet()} size="sm">
                     <Plus className="size-4 mr-1" />
                     Create Snippet
                   </Button>
@@ -184,6 +205,7 @@ export function SnippetList() {
                 language={snippet.language}
                 tags={snippet.tags}
                 updatedAt={snippet.updatedAt}
+                isFavorite={snippet.isFavorite}
                 isSelected={snippet.id === selectedSnippetId}
                 onClick={() => setSelectedSnippetId(snippet.id)}
               />

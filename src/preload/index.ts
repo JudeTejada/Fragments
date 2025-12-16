@@ -45,6 +45,24 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, settings),
   },
 
+  quickCapture: {
+    onNewSnippet: (cb: (payload: { content: string }) => void) => {
+      const handler = (_event: unknown, payload: { content: string }) => cb(payload);
+      ipcRenderer.on('quick-capture:new-snippet', handler);
+      return () => ipcRenderer.removeListener('quick-capture:new-snippet', handler);
+    },
+    onError: (cb: (payload: { message: string }) => void) => {
+      const handler = (_event: unknown, payload: { message: string }) => cb(payload);
+      ipcRenderer.on('quick-capture:error', handler);
+      return () => ipcRenderer.removeListener('quick-capture:error', handler);
+    },
+    onShortcutError: (cb: (payload: { shortcut: string; message: string }) => void) => {
+      const handler = (_event: unknown, payload: { shortcut: string; message: string }) => cb(payload);
+      ipcRenderer.on('quick-capture:shortcut-error', handler);
+      return () => ipcRenderer.removeListener('quick-capture:shortcut-error', handler);
+    },
+  },
+
   backup: {
     export: (): Promise<IPCResponse<string>> =>
       ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
