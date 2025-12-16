@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { Code2, Trash2, Check, X, Plus } from 'lucide-react';
+import { Code2, Trash2, Check, X, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SUPPORTED_LANGUAGES } from '@shared/types';
 
@@ -25,7 +25,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export function SnippetDetail() {
-  const { selectedSnippet, updateSnippet, deleteSnippet } = useSnippetContext();
+  const { selectedSnippet, updateSnippet, deleteSnippet, isSaving } = useSnippetContext();
 
   // Local state for editing
   const [title, setTitle] = React.useState('');
@@ -150,12 +150,21 @@ export function SnippetDetail() {
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    'text-xs text-muted-foreground transition-opacity',
-                    showSaved ? 'opacity-100' : 'opacity-0'
+                    'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
+                    (isSaving || showSaved) ? 'opacity-100' : 'opacity-0'
                   )}
                 >
-                  <Check className="inline size-3 mr-1" />
-                  Saved
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="size-3 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="size-3 mr-1" />
+                      Saved
+                    </>
+                  )}
                 </span>
                 <Button
                   variant="ghost"

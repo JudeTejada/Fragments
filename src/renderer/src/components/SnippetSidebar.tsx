@@ -12,10 +12,12 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Code2, Hash, Plus, Search } from 'lucide-react';
 import { useSnippetContext } from '@/context/SnippetContext';
 import { Button } from '@/components/ui/button';
+import { SettingsSheet } from '@/components/SettingsSheet';
 
 export function SnippetSidebar() {
   const {
@@ -49,19 +51,22 @@ export function SnippetSidebar() {
             <SidebarTrigger className="-ml-1" />
             <span className="group-data-[collapsible=icon]:hidden">Snippets</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg group-data-[collapsible=icon]:hidden"
-            onClick={createSnippet}
-          >
-            <Plus className="size-4" />
-            <span className="sr-only">New Snippet</span>
-          </Button>
+          <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 rounded-lg"
+              onClick={createSnippet}
+            >
+              <Plus className="size-4" />
+              <span className="sr-only">New Snippet</span>
+            </Button>
+          </div>
         </div>
         <div className="relative group-data-[collapsible=icon]:hidden">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <SidebarInput
+            data-search-input
             placeholder="Search snippets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -118,8 +123,16 @@ export function SnippetSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
+      {/* Footer with Settings */}
+      <SidebarFooter className="border-t border-sidebar-border p-2">
+        <div className="flex items-center justify-center group-data-[collapsible=icon]:justify-center">
+          <SettingsSheet />
+        </div>
+      </SidebarFooter>
+
       {/* Rail for collapse/expand interaction */}
       <SidebarRail />
     </Sidebar>
   );
 }
+

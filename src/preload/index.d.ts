@@ -25,6 +25,12 @@ interface CodeSnippetsAPI {
     get: () => Promise<IPCResponse<Settings>>
     update: (settings: Partial<Settings>) => Promise<IPCResponse<Settings>>
   }
+  backup: {
+    export: () => Promise<IPCResponse<string>>
+  }
+  system: {
+    getDbPath: () => Promise<IPCResponse<string>>
+  }
 }
 
 declare global {

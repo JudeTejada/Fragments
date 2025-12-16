@@ -16,8 +16,9 @@ export const IPC_CHANNELS = {
   SETTINGS_GET: 'settings:get',
   SETTINGS_UPDATE: 'settings:update',
 
-  // Backup
+  // Backup & System
   BACKUP_EXPORT: 'backup:export',
+  DB_PATH: 'db:path',
 } as const;
 
 export type IPCChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];

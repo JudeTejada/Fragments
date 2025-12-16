@@ -1,9 +1,11 @@
 // IPC Handlers - registers all IPC handlers for main process
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
+import { copyFileSync } from 'fs';
 import { IPC_CHANNELS } from '../../shared/channels';
 import { SnippetRepository } from '../repositories/snippetRepository';
 import { TagRepository } from '../repositories/tagRepository';
 import { SettingsRepository } from '../repositories/settingsRepository';
+import { getDatabaseFilePath } from '../database/database';
 import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings } from '../../shared/types';
 
 /**
@@ -147,5 +149,58 @@ export function registerIPCHandlers(): void {
     }
   });
 
+  // ========================================
+  // Backup & System Handlers
+  // ========================================
+
+  /**
+   * Get the database file path
+   */
+  ipcMain.handle(IPC_CHANNELS.DB_PATH, () => {
+    try {
+      return { success: true, data: getDatabaseFilePath() };
+    } catch (error) {
+      console.error('Error getting DB path:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  /**
+   * Export/backup the database to a user-selected location
+   */
+  ipcMain.handle(IPC_CHANNELS.BACKUP_EXPORT, async () => {
+    try {
+      const dbPath = getDatabaseFilePath();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const defaultFileName = `code-snippets-backup-${timestamp}.db`;
+
+      // Show save dialog
+      const result = await dialog.showSaveDialog({
+        title: 'Export Library Backup',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'SQLite Database', extensions: ['db'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: 'Export canceled' };
+      }
+
+      // Copy the database file
+      copyFileSync(dbPath, result.filePath);
+
+      // Save the export path in settings
+      SettingsRepository.set('dbBackupLastPath', result.filePath);
+
+      return { success: true, data: result.filePath };
+    } catch (error) {
+      console.error('Error exporting backup:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
   console.log('IPC handlers registered successfully.');
 }
+

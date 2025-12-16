@@ -44,6 +44,16 @@ const api = {
     update: (settings: Partial<Settings>): Promise<IPCResponse<Settings>> =>
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, settings),
   },
+
+  backup: {
+    export: (): Promise<IPCResponse<string>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
+  },
+
+  system: {
+    getDbPath: (): Promise<IPCResponse<string>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DB_PATH),
+  },
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
