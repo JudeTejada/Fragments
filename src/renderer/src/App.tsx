@@ -4,6 +4,7 @@ import { SnippetProvider, useSnippetContext } from '@/context/SnippetContext';
 import { SnippetSidebar } from '@/components/SnippetSidebar';
 import { SnippetList } from '@/components/SnippetList';
 import { SnippetDetail } from '@/components/SnippetDetail';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Inner component that has access to context
 function AppContent() {
@@ -52,9 +53,11 @@ function AppContent() {
 
 function App(): React.JSX.Element {
   return (
-    <SnippetProvider>
-      <AppContent />
-    </SnippetProvider>
+    <TooltipProvider>
+      <SnippetProvider>
+        <AppContent />
+      </SnippetProvider>
+    </TooltipProvider>
   );
 }
 

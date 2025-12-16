@@ -49,7 +49,9 @@ export function SnippetSidebar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <SidebarTrigger className="-ml-1" />
-            <span className="group-data-[collapsible=icon]:hidden">Snippets</span>
+            <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+              Snippets
+            </span>
           </div>
           <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
             <Button
@@ -85,10 +87,15 @@ export function SnippetSidebar() {
                   isActive={selectedTagIds.length === 0}
                   onClick={clearFilters}
                   tooltip="All Snippets"
+                  className="transition-all duration-200 ease-out"
                 >
-                  <Code2 className="size-4" />
-                  <span>All Snippets</span>
-                  <SidebarMenuBadge>{filteredSnippets.length}</SidebarMenuBadge>
+                  <Code2 className="size-4 shrink-0 transition-transform duration-200" />
+                  <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+                    All Snippets
+                  </span>
+                  <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                    {filteredSnippets.length}
+                  </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -97,7 +104,9 @@ export function SnippetSidebar() {
 
         {/* Tags */}
         <SidebarGroup>
-          <SidebarGroupLabel>Tags</SidebarGroupLabel>
+          <SidebarGroupLabel className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0">
+            Tags
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {tags.map((tag) => (
@@ -105,16 +114,21 @@ export function SnippetSidebar() {
                   <SidebarMenuButton
                     isActive={selectedTagIds.includes(tag.id)}
                     onClick={() => handleTagClick(tag.id)}
-                    tooltip={tag.name}
+                    tooltip={`#${tag.name}`}
+                    className="transition-all duration-200 ease-out"
                   >
-                    <Hash className="size-4 text-muted-foreground" />
-                    <span>{tag.name}</span>
-                    <SidebarMenuBadge>{tag.count}</SidebarMenuBadge>
+                    <Hash className="size-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                    <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+                      {tag.name}
+                    </span>
+                    <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                      {tag.count}
+                    </SidebarMenuBadge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
               {tags.length === 0 && (
-                <p className="px-2 py-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                <p className="px-2 py-4 text-xs text-muted-foreground transition-opacity duration-200 group-data-[collapsible=icon]:hidden">
                   No tags yet
                 </p>
               )}
