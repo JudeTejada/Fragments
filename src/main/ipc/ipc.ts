@@ -6,7 +6,10 @@ import { SnippetRepository } from '../repositories/snippetRepository';
 import { TagRepository } from '../repositories/tagRepository';
 import { SettingsRepository } from '../repositories/settingsRepository';
 import { getDatabaseFilePath } from '../database/database';
-import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings } from '../../shared/types';
+import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, AiActionType } from '../../shared/types';
+import { AiService } from '../services/aiService';
+
+const aiService = new AiService();
 
 /**
  * Register all IPC handlers for the application
@@ -150,6 +153,40 @@ export function registerIPCHandlers(): void {
   });
 
   // ========================================
+  // AI Handlers
+  // ========================================
+
+  ipcMain.handle(IPC_CHANNELS.AI_RUN, async (_event, args: { snippetId: string; type: AiActionType }) => {
+    try {
+      const aiRun = await aiService.runOnSnippet(args.snippetId, args.type);
+      return { success: true, data: aiRun };
+    } catch (error) {
+      console.error('Error running AI:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.AI_LIST_FOR_SNIPPET, async (_event, args: { snippetId: string }) => {
+    try {
+      const aiRuns = await aiService.listForSnippet(args.snippetId);
+      return { success: true, data: aiRuns };
+    } catch (error) {
+      console.error('Error listing AI runs:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.AI_TEST_CONNECTION, async () => {
+    try {
+      const result = await aiService.testConnection();
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Error testing AI connection:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // ========================================
   // Backup & System Handlers
   // ========================================
 
@@ -203,4 +240,3 @@ export function registerIPCHandlers(): void {
 
   console.log('IPC handlers registered successfully.');
 }
-

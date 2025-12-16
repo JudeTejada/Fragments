@@ -1,5 +1,17 @@
 // Shared types for the Code Snippets application
 
+export type AiActionType = 'explain' | 'comment' | 'usage_example';
+
+export type AiBackend = 'none' | 'ollama';
+
+export interface AiRun {
+  id: string;
+  snippetId: string;
+  type: AiActionType;
+  result: string;
+  createdAt: string;
+}
+
 export interface Snippet {
   id: string;
   title: string;
@@ -19,6 +31,8 @@ export interface Tag {
 
 export interface Settings {
   dbBackupLastPath?: string;
+  ai_backend?: AiBackend;
+  ollama_model_name?: string;
 }
 
 // IPC payload types

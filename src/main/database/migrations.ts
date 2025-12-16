@@ -47,5 +47,24 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_snippets_language ON snippets(language);
       CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
     `
+  },
+
+  // Version 2: AI runs table and AI settings defaults
+  {
+    version: 2,
+    up: `
+      CREATE TABLE IF NOT EXISTS ai_runs (
+        id TEXT PRIMARY KEY,
+        snippet_id TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('explain', 'comment', 'usage_example')),
+        result TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (snippet_id) REFERENCES snippets(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_runs_snippet_id ON ai_runs(snippet_id);
+
+      INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_backend', '"none"');
+    `
   }
 ];

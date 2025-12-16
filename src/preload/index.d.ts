@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { Snippet, Tag, Settings, CreateSnippetPayload, UpdateSnippetPayload, SearchParams } from '../shared/types'
+import type { Snippet, Tag, Settings, CreateSnippetPayload, UpdateSnippetPayload, SearchParams, AiRun, AiActionType } from '../shared/types'
 
 // Response type from IPC handlers
 interface IPCResponse<T> {
@@ -31,6 +31,11 @@ interface CodeSnippetsAPI {
   system: {
     getDbPath: () => Promise<IPCResponse<string>>
   }
+  ai: {
+    run: (data: { snippetId: string; type: AiActionType }) => Promise<IPCResponse<AiRun>>
+    listForSnippet: (snippetId: string) => Promise<IPCResponse<AiRun[]>>
+    testConnection: () => Promise<IPCResponse<{ ok: boolean; message?: string; models?: string[] }>>
+  }
 }
 
 declare global {
@@ -41,4 +46,3 @@ declare global {
 }
 
 export type { IPCResponse, CodeSnippetsAPI }
-

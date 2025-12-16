@@ -1,36 +1,44 @@
-import { useSnippetContext } from '@/context/SnippetContext';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
-import { Code2, Plus, FileCode, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useSnippetContext } from '@/context/SnippetContext'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent
+} from '@/components/ui/empty'
+import { Code2, Plus, FileCode, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
 
-  return date.toLocaleDateString();
+  return date.toLocaleDateString()
 }
 
 interface SnippetRowProps {
-  id: string;
-  title: string;
-  language: string;
-  tags: { id: string; name: string }[];
-  updatedAt: string;
-  isSelected: boolean;
-  onClick: () => void;
+  id: string
+  title: string
+  language: string
+  tags: { id: string; name: string }[]
+  updatedAt: string
+  isSelected: boolean
+  onClick: () => void
 }
 
 function SnippetRow({ title, language, tags, updatedAt, isSelected, onClick }: SnippetRowProps) {
@@ -45,29 +53,29 @@ function SnippetRow({ title, language, tags, updatedAt, isSelected, onClick }: S
       )}
     >
       <div className="flex flex-col gap-1.5">
-        <h3 className={cn(
-          'font-medium text-sm truncate',
-          isSelected ? 'text-foreground' : 'text-foreground/90'
-        )}>
+        <h3
+          className={cn(
+            'font-medium text-sm truncate',
+            isSelected ? 'text-foreground' : 'text-foreground/90'
+          )}
+        >
           {title}
         </h3>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {language}
           </Badge>
-          {tags.slice(0, 2).map(tag => (
+          {tags.slice(0, 2).map((tag) => (
             <span key={tag.id} className="text-muted-foreground/70">
               #{tag.name}
             </span>
           ))}
-          {tags.length > 2 && (
-            <span className="text-muted-foreground/50">+{tags.length - 2}</span>
-          )}
+          {tags.length > 2 && <span className="text-muted-foreground/50">+{tags.length - 2}</span>}
           <span className="ml-auto">{formatRelativeTime(updatedAt)}</span>
         </div>
       </div>
     </button>
-  );
+  )
 }
 
 function SnippetRowSkeleton() {
@@ -82,7 +90,7 @@ function SnippetRowSkeleton() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export function SnippetList() {
@@ -92,12 +100,29 @@ export function SnippetList() {
     setSelectedSnippetId,
     searchQuery,
     createSnippet,
+    deleteSnippet,
     isLoading,
-    isSaving,
-  } = useSnippetContext();
+    isSaving
+  } = useSnippetContext()
 
-  const hasNoSnippets = filteredSnippets.length === 0 && !isLoading;
-  const isSearchActive = searchQuery.trim().length > 0;
+  const hasNoSnippets = filteredSnippets.length === 0 && !isLoading
+  const isSearchActive = searchQuery.trim().length > 0
+
+  // Handle keyboard shortcuts
+  useHotkeys(
+    'delete, backspace',
+    (event) => {
+      event.preventDefault()
+      if (selectedSnippetId && !isSaving && filteredSnippets.length > 0) {
+        deleteSnippet(selectedSnippetId)
+      }
+    },
+    {
+      enableOnFormTags: false, // Don't trigger when typing in input fields
+      description: 'Delete selected snippet'
+    },
+    [selectedSnippetId, deleteSnippet, isSaving, filteredSnippets.length]
+  )
 
   return (
     <div className="flex h-full w-80 flex-col border-r border-border bg-background/50">
@@ -113,11 +138,7 @@ export function SnippetList() {
           onClick={createSnippet}
           disabled={isSaving}
         >
-          {isSaving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Plus className="size-4" />
-          )}
+          {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
           <span className="sr-only">New Snippet</span>
         </Button>
       </div>
@@ -138,9 +159,7 @@ export function SnippetList() {
                 <EmptyMedia variant="icon">
                   {isSearchActive ? <FileCode className="size-4" /> : <Code2 className="size-4" />}
                 </EmptyMedia>
-                <EmptyTitle>
-                  {isSearchActive ? 'No results' : 'No snippets yet'}
-                </EmptyTitle>
+                <EmptyTitle>{isSearchActive ? 'No results' : 'No snippets yet'}</EmptyTitle>
                 <EmptyDescription>
                   {isSearchActive
                     ? 'Try a different search term'
@@ -157,7 +176,7 @@ export function SnippetList() {
               )}
             </Empty>
           ) : (
-            filteredSnippets.map(snippet => (
+            filteredSnippets.map((snippet) => (
               <SnippetRow
                 key={snippet.id}
                 id={snippet.id}
@@ -173,5 +192,5 @@ export function SnippetList() {
         </div>
       </ScrollArea>
     </div>
-  );
+  )
 }

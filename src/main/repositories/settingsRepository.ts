@@ -16,7 +16,7 @@ export const SettingsRepository = {
 
     const rows = db.prepare('SELECT key, value FROM settings').all() as SettingRow[];
 
-    const settings: Settings = {};
+    const settings: Settings = { ai_backend: 'none' };
 
     for (const row of rows) {
       try {
@@ -27,6 +27,8 @@ export const SettingsRepository = {
         settings[row.key as keyof Settings] = row.value as any;
       }
     }
+
+    settings.ai_backend = settings.ai_backend ?? 'none';
 
     return settings;
   },

@@ -16,6 +16,11 @@ export const IPC_CHANNELS = {
   SETTINGS_GET: 'settings:get',
   SETTINGS_UPDATE: 'settings:update',
 
+  // AI
+  AI_RUN: 'ai:run',
+  AI_LIST_FOR_SNIPPET: 'ai:listForSnippet',
+  AI_TEST_CONNECTION: 'ai:testConnection',
+
   // Backup & System
   BACKUP_EXPORT: 'backup:export',
   DB_PATH: 'db:path',

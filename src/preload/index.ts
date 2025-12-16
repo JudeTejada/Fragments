@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IPC_CHANNELS } from '../shared/channels'
-import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, Snippet, Tag } from '../shared/types'
+import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, Snippet, Tag, AiRun, AiActionType } from '../shared/types'
 
 // Response type from IPC handlers
 interface IPCResponse<T> {
@@ -54,6 +54,15 @@ const api = {
     getDbPath: (): Promise<IPCResponse<string>> =>
       ipcRenderer.invoke(IPC_CHANNELS.DB_PATH),
   },
+
+  ai: {
+    run: (data: { snippetId: string; type: AiActionType }): Promise<IPCResponse<AiRun>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_RUN, data),
+    listForSnippet: (snippetId: string): Promise<IPCResponse<AiRun[]>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_LIST_FOR_SNIPPET, { snippetId }),
+    testConnection: (): Promise<IPCResponse<{ ok: boolean; message?: string; models?: string[] }>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_TEST_CONNECTION),
+  },
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
@@ -72,4 +81,3 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
 }
-

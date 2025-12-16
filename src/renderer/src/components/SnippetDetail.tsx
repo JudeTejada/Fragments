@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { Code2, Trash2, Check, X, Plus, Loader2 } from 'lucide-react';
+import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SUPPORTED_LANGUAGES } from '@shared/types';
+import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types';
+import { useAiForSnippet } from '@/hooks/useAiForSnippet';
 
 // Auto-save debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -24,6 +26,12 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const ACTION_LABELS: Record<AiActionType, string> = {
+  explain: 'Explain',
+  comment: 'Add comments',
+  usage_example: 'Usage example',
+};
+
 export function SnippetDetail() {
   const { selectedSnippet, updateSnippet, deleteSnippet, isSaving } = useSnippetContext();
 
@@ -34,6 +42,15 @@ export function SnippetDetail() {
   const [language, setLanguage] = React.useState('plaintext');
   const [tagInput, setTagInput] = React.useState('');
   const [showSaved, setShowSaved] = React.useState(false);
+
+  const {
+    aiRuns,
+    loadingType,
+    error: aiError,
+    isConfigured: isAiConfigured,
+    settingsMessage: aiSettingsMessage,
+    run: runAiAction,
+  } = useAiForSnippet(selectedSnippet?.id ?? null);
 
   // Sync local state when selected snippet changes
   React.useEffect(() => {
@@ -257,6 +274,102 @@ export function SnippetDetail() {
               className="min-h-[100px] resize-none"
             />
           </div>
+
+          {/* AI Assistant */}
+          <Card className="border border-dashed border-muted-foreground/40 bg-muted/30">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base">AI assistant</CardTitle>
+                <CardDescription>Runs locally via Ollama; no cloud calls.</CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => runAiAction('explain')}
+                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                >
+                  {loadingType === 'explain' ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <MessageSquareText className="size-4" />
+                  )}
+                  {loadingType === 'explain' ? 'Explaining...' : 'Explain'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => runAiAction('comment')}
+                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                >
+                  {loadingType === 'comment' ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <PencilLine className="size-4" />
+                  )}
+                  {loadingType === 'comment' ? 'Commenting...' : 'Add comments'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => runAiAction('usage_example')}
+                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                >
+                  {loadingType === 'usage_example' ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <BookOpen className="size-4" />
+                  )}
+                  {loadingType === 'usage_example' ? 'Generating...' : 'Usage example'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardPanel className="space-y-3 pt-0">
+              {!isAiConfigured && (
+                <div className="flex items-start gap-3 rounded-xl border border-dashed border-amber-300/60 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
+                  <Sparkles className="mt-0.5 size-4 text-amber-600" />
+                  <div className="space-y-1">
+                    <p className="font-medium">AI disabled</p>
+                    <p className="text-xs text-amber-800/80">
+                      {aiSettingsMessage ?? 'Enable AI in Settings to use your local model.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {aiError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {aiError}
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-72 overflow-auto">
+                {aiRuns.map((run) => (
+                  <article key={run.id} className="rounded-xl border border-muted-foreground/20 bg-background/60 p-3 shadow-xs">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="uppercase tracking-wide text-[10px]">
+                        {ACTION_LABELS[run.type]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(run.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
+                      {run.result}
+                    </pre>
+                  </article>
+                ))}
+                {aiRuns.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No AI results yet. Run an action above to get started.
+                  </p>
+                )}
+              </div>
+            </CardPanel>
+          </Card>
         </div>
       </ScrollArea>
     </div>
