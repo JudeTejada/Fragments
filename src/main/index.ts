@@ -6,6 +6,12 @@ import { initDatabase, closeDatabase } from './database/database'
 import { registerIPCHandlers } from './ipc/ipc'
 import { registerQuickCaptureShortcut, unregisterAllShortcuts } from './quickCapture'
 
+// Allow tests to provide an isolated userData directory so the local
+// database doesn't overlap with real user data.
+if (process.env.E2E_USER_DATA_DIR) {
+  app.setPath('userData', process.env.E2E_USER_DATA_DIR)
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

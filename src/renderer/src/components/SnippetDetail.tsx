@@ -247,6 +247,7 @@ export function SnippetDetail() {
                     <button
                       onClick={() => handleRemoveTag(tag.id)}
                       className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                      aria-label={`Remove ${tag.name}`}
                     >
                       <X className="size-3" />
                     </button>
