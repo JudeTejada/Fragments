@@ -67,10 +67,5 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild"
-    ]
-  }
+  "packageManager": "npm@11.6.2"
 }
