@@ -46,6 +46,8 @@ function SnippetRow({ title, language, tags, updatedAt, isFavorite, isSelected, 
   return (
     <button
       onClick={onClick}
+      data-testid="snippet-row"
+      data-title={title}
       className={cn(
         'w-full text-left px-4 py-3 rounded-xl transition-all',
         'hover:bg-accent/50',
