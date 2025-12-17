@@ -80,6 +80,7 @@ export function SnippetSidebar() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <SidebarInput
             data-search-input
+            data-testid="sidebar-search"
             placeholder="Search snippets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -95,6 +96,7 @@ export function SnippetSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  data-testid="filter-all"
                   isActive={!showFavoritesOnly && selectedTagIds.length === 0}
                   onClick={clearFilters}
                   tooltip="All Snippets"
@@ -111,6 +113,7 @@ export function SnippetSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  data-testid="filter-favorites"
                   isActive={showFavoritesOnly}
                   onClick={() => setShowFavoritesOnly(prev => !prev)}
                   tooltip="Favorites"
@@ -144,6 +147,7 @@ export function SnippetSidebar() {
               {tags.map((tag) => (
                 <SidebarMenuItem key={tag.id}>
                   <SidebarMenuButton
+                    data-testid="tag-filter"
                     isActive={selectedTagIds.includes(tag.id)}
                     onClick={() => handleTagClick(tag.id)}
                     tooltip={`#${tag.name}`}
