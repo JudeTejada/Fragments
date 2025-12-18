@@ -16,8 +16,8 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
-import { useSnippetContext } from '@/context/SnippetContext';
-import { Button } from '@/components/ui/button';
+import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { SettingsSheet } from '@/components/SettingsSheet';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverPopup, PopoverClose } from '@/components/ui/popover';
@@ -35,21 +35,19 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function SnippetSidebar() {
-  const {
-    snippets,
-    tags,
-    selectedTagIds,
-    searchQuery,
-    filteredSnippets,
-    showFavoritesOnly,
-    setSelectedTagIds,
-    setSearchQuery,
-    setShowFavoritesOnly,
-    createSnippet,
-    createTag,
-    updateTag,
-    deleteTag,
-  } = useSnippetContext();
+  const snippets = useSnippetState((state) => state.snippets);
+  const tags = useSnippetState((state) => state.tags);
+  const selectedTagIds = useSnippetState((state) => state.selectedTagIds);
+  const searchQuery = useSnippetState((state) => state.searchQuery);
+  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly);
+  const filteredSnippets = useFilteredSnippets();
+  const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds);
+  const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery);
+  const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly);
+  const createSnippet = useSnippetActions((actions) => actions.createSnippet);
+  const createTag = useSnippetActions((actions) => actions.createTag);
+  const updateTag = useSnippetActions((actions) => actions.updateTag);
+  const deleteTag = useSnippetActions((actions) => actions.deleteTag);
 
   // State for adding new tag
   const [newTagName, setNewTagName] = React.useState('');
@@ -255,19 +253,15 @@ export function SnippetSidebar() {
             </SidebarGroupLabel>
             <Popover open={isAddTagOpen} onOpenChange={setIsAddTagOpen}>
               <PopoverTrigger
-                className="group-data-[collapsible=icon]:hidden"
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 rounded-md"
-                    data-testid="add-tag-button"
-                  >
-                    <Plus className="size-3.5" />
-                    <span className="sr-only">Add Tag</span>
-                  </Button>
-                }
-              />
+                data-testid="add-tag-button"
+                className={cn(
+                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+                  'size-6 rounded-md group-data-[collapsible=icon]:hidden'
+                )}
+              >
+                <Plus className="size-3.5" />
+                <span className="sr-only">Add Tag</span>
+              </PopoverTrigger>
               <PopoverPopup className="w-64" side="right" align="start">
                 <div className="space-y-3">
                   <h4 className="font-medium text-sm">Add New Tag</h4>

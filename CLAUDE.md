@@ -6,31 +6,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Development
 ```bash
-pnpm dev              # Start development server with hot reload
-pnpm start            # Preview production build
+npm dev              # Start development server with hot reload
+npm start            # Preview production build
 ```
 
 ### Building
 ```bash
-pnpm build            # Build for current platform
-pnpm build:win        # Build for Windows
-pnpm build:mac        # Build for macOS
-pnpm build:linux      # Build for Linux
-pnpm build:unpack     # Build without packaging (outputs to dist/)
+npm build            # Build for current platform
+npm build:win        # Build for Windows
+npm build:mac        # Build for macOS
+npm build:linux      # Build for Linux
+npm build:unpack     # Build without packaging (outputs to dist/)
 ```
 
 ### Code Quality
 ```bash
-pnpm format           # Format code with Prettier
-pnpm lint             # Lint with ESLint
-pnpm typecheck        # Run all TypeScript checks
-pnpm typecheck:node   # Check main/preload TypeScript
-pnpm typecheck:web    # Check renderer TypeScript
+npm format           # Format code with Prettier
+npm lint             # Lint with ESLint
+npm typecheck        # Run all TypeScript checks
+npm typecheck:node   # Check main/preload TypeScript
+npm typecheck:web    # Check renderer TypeScript
 ```
 
 ### Installation
 ```bash
-pnpm install          # Install dependencies
+npm install          # Install dependencies
 ```
 
 ## Architecture

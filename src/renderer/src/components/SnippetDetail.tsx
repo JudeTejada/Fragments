@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSnippetContext } from '@/context/SnippetContext';
+import { useSelectedSnippet, useSnippetActions, useSnippetState } from '@/context/SnippetContext';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,7 +40,12 @@ const ACTION_LABELS: Record<AiActionType, string> = {
 };
 
 export function SnippetDetail() {
-  const { selectedSnippet, updateSnippet, deleteSnippet, toggleFavorite, isSaving, tags } = useSnippetContext();
+  const selectedSnippet = useSelectedSnippet();
+  const isSaving = useSnippetState((state) => state.isSaving);
+  const tags = useSnippetState((state) => state.tags);
+  const updateSnippet = useSnippetActions((actions) => actions.updateSnippet);
+  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet);
+  const toggleFavorite = useSnippetActions((actions) => actions.toggleFavorite);
 
   // Local state for editing
   const [title, setTitle] = React.useState('');

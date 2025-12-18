@@ -1,8 +1,8 @@
 import * as React from 'react';
+import { create } from 'zustand';
 import type { Snippet, Tag, CreateSnippetPayload, UpdateSnippetPayload } from '@shared/types';
 
-interface SnippetContextType {
-  // State
+type SnippetState = {
   snippets: Snippet[];
   tags: Tag[];
   selectedSnippetId: string | null;
@@ -13,17 +13,14 @@ interface SnippetContextType {
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
+};
 
-  // Computed
-  selectedSnippet: Snippet | null;
-  filteredSnippets: Snippet[];
-
-  // Actions
+type SnippetActions = {
   setSelectedSnippetId: (id: string | null) => void;
   setSelectedSnippetIds: (ids: Set<string>) => void;
   setSelectedTagIds: (ids: string[]) => void;
   setSearchQuery: (query: string) => void;
-  setShowFavoritesOnly: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFavoritesOnly: (value: React.SetStateAction<boolean>) => void;
   createSnippet: (payload?: Partial<CreateSnippetPayload>) => Promise<Snippet | null>;
   updateSnippet: (update: Partial<Snippet> & { id: string }) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
@@ -31,114 +28,330 @@ interface SnippetContextType {
   deleteSnippet: (id: string) => Promise<void>;
   deleteMultipleSnippets: (ids: string[]) => Promise<void>;
   refreshData: () => Promise<void>;
-  // Tag actions
   createTag: (name: string) => Promise<Tag | null>;
   updateTag: (id: string, name: string) => Promise<Tag | null>;
   deleteTag: (id: string) => Promise<boolean>;
-}
+};
 
-const SnippetContext = React.createContext<SnippetContextType | null>(null);
+type SnippetStore = SnippetState & SnippetActions;
 
-export function useSnippetContext() {
-  const context = React.useContext(SnippetContext);
-  if (!context) {
-    throw new Error('useSnippetContext must be used within a SnippetProvider');
-  }
-  return context;
-}
-
-export function SnippetProvider({ children }: { children: React.ReactNode }) {
-  const [snippets, setSnippets] = React.useState<Snippet[]>([]);
-  const [tags, setTags] = React.useState<Tag[]>([]);
-  const [selectedSnippetId, setSelectedSnippetId] = React.useState<string | null>(null);
-  const [selectedSnippetIds, setSelectedSnippetIds] = React.useState<Set<string>>(new Set());
-  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // Fetch snippets from API
-  const fetchSnippets = React.useCallback(async () => {
+const useSnippetStore = create<SnippetStore>((set, get) => {
+  const fetchSnippets = async () => {
     try {
       const result = await window.api.snippets.list();
       if (result.success && result.data) {
-        setSnippets(result.data);
-        // Select first snippet if none selected
+        set({ snippets: result.data });
+        const { selectedSnippetId } = get();
         if (!selectedSnippetId && result.data.length > 0) {
-          setSelectedSnippetId(result.data[0].id);
+          set({ selectedSnippetId: result.data[0].id });
         }
       } else {
-        setError(result.error || 'Failed to fetch snippets');
+        set({ error: result.error || 'Failed to fetch snippets' });
       }
     } catch (err) {
-      setError(String(err));
+      set({ error: String(err) });
     }
-  }, [selectedSnippetId]);
+  };
 
-  // Fetch tags from API
-  const fetchTags = React.useCallback(async () => {
+  const fetchTags = async () => {
     try {
       const result = await window.api.tags.list();
       if (result.success && result.data) {
-        setTags(result.data);
+        set({ tags: result.data });
       } else {
-        setError(result.error || 'Failed to fetch tags');
+        set({ error: result.error || 'Failed to fetch tags' });
       }
     } catch (err) {
-      setError(String(err));
+      set({ error: String(err) });
     }
-  }, []);
+  };
 
-  // Refresh all data
-  const refreshData = React.useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    await Promise.all([fetchSnippets(), fetchTags()]);
-    setIsLoading(false);
-  }, [fetchSnippets, fetchTags]);
+  return {
+    snippets: [],
+    tags: [],
+    selectedSnippetId: null,
+    selectedSnippetIds: new Set(),
+    selectedTagIds: [],
+    searchQuery: '',
+    showFavoritesOnly: false,
+    isLoading: true,
+    isSaving: false,
+    error: null,
+    setSelectedSnippetId: (id) => set({ selectedSnippetId: id }),
+    setSelectedSnippetIds: (ids) => set({ selectedSnippetIds: ids }),
+    setSelectedTagIds: (ids) => set({ selectedTagIds: ids }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    setShowFavoritesOnly: (value) =>
+      set((state) => ({
+        showFavoritesOnly: typeof value === 'function' ? value(state.showFavoritesOnly) : value,
+      })),
+    refreshData: async () => {
+      set({ isLoading: true, error: null });
+      await Promise.all([fetchSnippets(), fetchTags()]);
+      set({ isLoading: false });
+    },
+    createSnippet: async (payloadOverride?: Partial<CreateSnippetPayload>) => {
+      set({ isSaving: true });
+      try {
+        const { showFavoritesOnly } = get();
+        const payload: CreateSnippetPayload = {
+          title: payloadOverride?.title?.trim() || 'Untitled Snippet',
+          language: payloadOverride?.language ?? 'plaintext',
+          content: payloadOverride?.content ?? '',
+          notes: payloadOverride?.notes ?? '',
+          isFavorite: payloadOverride?.isFavorite ?? showFavoritesOnly,
+          tags: payloadOverride?.tags ?? [],
+        };
 
-  // Initial data load
-  React.useEffect(() => {
-    refreshData();
-  }, []);
+        const result = await window.api.snippets.create(payload);
 
-  // Computed: selected snippet
-  const selectedSnippet = React.useMemo(() => {
-    return snippets.find(s => s.id === selectedSnippetId) ?? null;
-  }, [snippets, selectedSnippetId]);
+        if (result.success && result.data) {
+          set((state) => ({ snippets: [result.data!, ...state.snippets] }));
+          set({ selectedSnippetId: result.data.id });
+          fetchTags();
+          return result.data;
+        }
+        set({ error: result.error || 'Failed to create snippet' });
+        return null;
+      } catch (err) {
+        set({ error: String(err) });
+        return null;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    updateSnippet: async (update: Partial<Snippet> & { id: string }) => {
+      set({ isSaving: true });
+      try {
+        const payload: UpdateSnippetPayload = {
+          id: update.id,
+          title: update.title,
+          language: update.language,
+          content: update.content,
+          notes: update.notes ?? undefined,
+          isFavorite: update.isFavorite,
+          tags: update.tags?.map((tag) => tag.name),
+        };
 
-  // Computed: filtered snippets (client-side filtering for immediate feedback)
-  const filteredSnippets = React.useMemo(() => {
+        const result = await window.api.snippets.update(payload);
+
+        if (result.success && result.data) {
+          set((state) => ({
+            snippets: state.snippets.map((snippet) =>
+              snippet.id === update.id ? result.data! : snippet
+            ),
+          }));
+          if (update.tags !== undefined) {
+            fetchTags();
+          }
+        } else {
+          set({ error: result.error || 'Failed to update snippet' });
+        }
+      } catch (err) {
+        set({ error: String(err) });
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    toggleFavorite: async (id: string) => {
+      const { snippets, updateSnippet } = get();
+      const target = snippets.find((snippet) => snippet.id === id);
+      if (!target) return;
+
+      await updateSnippet({ id, isFavorite: !target.isFavorite });
+    },
+    toggleFavoriteMultiple: async (ids: string[]) => {
+      set({ isSaving: true });
+      try {
+        const { snippets } = get();
+        const shouldAddFavorite = ids.some((id) => {
+          const snippet = snippets.find((item) => item.id === id);
+          return snippet && !snippet.isFavorite;
+        });
+
+        for (const id of ids) {
+          const target = snippets.find((item) => item.id === id);
+          if (target && target.isFavorite !== shouldAddFavorite) {
+            await window.api.snippets.update({ id, isFavorite: shouldAddFavorite });
+          }
+        }
+        await fetchSnippets();
+      } catch (err) {
+        set({ error: String(err) });
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    deleteSnippet: async (id: string) => {
+      set({ isSaving: true });
+      try {
+        const { selectedSnippetId, snippets } = get();
+        const result = await window.api.snippets.delete(id);
+
+        if (result.success) {
+          set((state) => ({ snippets: state.snippets.filter((snippet) => snippet.id !== id) }));
+
+          if (selectedSnippetId === id) {
+            const remaining = snippets.filter((snippet) => snippet.id !== id);
+            set({ selectedSnippetId: remaining[0]?.id ?? null });
+          }
+
+          fetchTags();
+        } else {
+          set({ error: result.error || 'Failed to delete snippet' });
+        }
+      } catch (err) {
+        set({ error: String(err) });
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    deleteMultipleSnippets: async (ids: string[]) => {
+      set({ isSaving: true });
+      try {
+        const { selectedSnippetId, snippets } = get();
+        for (const id of ids) {
+          await window.api.snippets.delete(id);
+        }
+        set((state) => ({
+          snippets: state.snippets.filter((snippet) => !ids.includes(snippet.id)),
+        }));
+        set({ selectedSnippetIds: new Set() });
+        if (selectedSnippetId && ids.includes(selectedSnippetId)) {
+          const remaining = snippets.filter((snippet) => !ids.includes(snippet.id));
+          set({ selectedSnippetId: remaining[0]?.id ?? null });
+        }
+        fetchTags();
+      } catch (err) {
+        set({ error: String(err) });
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    createTag: async (name: string): Promise<Tag | null> => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.create(name);
+        if (result.success && result.data) {
+          await fetchTags();
+          return result.data;
+        }
+        set({ error: result.error || 'Failed to create tag' });
+        return null;
+      } catch (err) {
+        set({ error: String(err) });
+        return null;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    updateTag: async (id: string, name: string): Promise<Tag | null> => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.update(id, name);
+        if (result.success && result.data) {
+          await fetchTags();
+          await fetchSnippets();
+          return result.data;
+        }
+        set({ error: result.error || 'Failed to update tag' });
+        return null;
+      } catch (err) {
+        set({ error: String(err) });
+        return null;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    deleteTag: async (id: string): Promise<boolean> => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.delete(id);
+        if (result.success) {
+          set((state) => ({
+            selectedTagIds: state.selectedTagIds.filter((tagId) => tagId !== id),
+          }));
+          await fetchTags();
+          await fetchSnippets();
+          return true;
+        }
+        set({ error: result.error || 'Failed to delete tag' });
+        return false;
+      } catch (err) {
+        set({ error: String(err) });
+        return false;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+  };
+});
+
+export function useSnippetState<T>(
+  selector: (state: SnippetState) => T
+) {
+  return useSnippetStore(selector as (state: SnippetStore) => T);
+}
+
+export function useSnippetActions<T>(
+  selector: (actions: SnippetActions) => T
+) {
+  return useSnippetStore(selector as (state: SnippetStore) => T);
+}
+
+export function useFilteredSnippets() {
+  const snippets = useSnippetState((state) => state.snippets);
+  const searchQuery = useSnippetState((state) => state.searchQuery);
+  const selectedTagIds = useSnippetState((state) => state.selectedTagIds);
+  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly);
+
+  return React.useMemo(() => {
     let result = snippets;
 
-    // Filter by favorites
     if (showFavoritesOnly) {
-      result = result.filter(s => s.isFavorite);
+      result = result.filter((snippet) => snippet.isFavorite);
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        s =>
-          s.title.toLowerCase().includes(query) ||
-          s.content.toLowerCase().includes(query)
+        (snippet) =>
+          snippet.title.toLowerCase().includes(query) ||
+          snippet.content.toLowerCase().includes(query)
       );
     }
 
-    // Filter by selected tags
     if (selectedTagIds.length > 0) {
-      result = result.filter(s =>
-        selectedTagIds.some(tagId => s.tags.some(t => t.id === tagId))
+      result = result.filter((snippet) =>
+        selectedTagIds.some((tagId) => snippet.tags.some((tag) => tag.id === tagId))
       );
     }
 
     return result;
   }, [snippets, searchQuery, selectedTagIds, showFavoritesOnly]);
+}
 
-  // Ensure selection stays in sync with favorites view
+export function useSelectedSnippet() {
+  const snippets = useSnippetState((state) => state.snippets);
+  const selectedSnippetId = useSnippetState((state) => state.selectedSnippetId);
+
+  return React.useMemo(
+    () => snippets.find((snippet) => snippet.id === selectedSnippetId) ?? null,
+    [snippets, selectedSnippetId]
+  );
+}
+
+export function SnippetProvider({ children }: { children: React.ReactNode }) {
+  const refreshData = useSnippetActions((actions) => actions.refreshData);
+  const setSelectedSnippetId = useSnippetActions((actions) => actions.setSelectedSnippetId);
+  const selectedSnippetId = useSnippetState((state) => state.selectedSnippetId);
+  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly);
+  const filteredSnippets = useFilteredSnippets();
+
+  React.useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
   React.useEffect(() => {
     if (!showFavoritesOnly) return;
     if (filteredSnippets.length === 0) {
@@ -146,257 +359,11 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const selectedVisible = filteredSnippets.some(snippet => snippet.id === selectedSnippetId);
+    const selectedVisible = filteredSnippets.some((snippet) => snippet.id === selectedSnippetId);
     if (!selectedVisible) {
       setSelectedSnippetId(filteredSnippets[0].id);
     }
-  }, [filteredSnippets, selectedSnippetId, showFavoritesOnly]);
+  }, [filteredSnippets, selectedSnippetId, showFavoritesOnly, setSelectedSnippetId]);
 
-  // Actions
-  const createSnippet = React.useCallback(async (payloadOverride?: Partial<CreateSnippetPayload>) => {
-    setIsSaving(true);
-    try {
-      const payload: CreateSnippetPayload = {
-        title: payloadOverride?.title?.trim() || 'Untitled Snippet',
-        language: payloadOverride?.language ?? 'plaintext',
-        content: payloadOverride?.content ?? '',
-        notes: payloadOverride?.notes ?? '',
-        isFavorite: payloadOverride?.isFavorite ?? showFavoritesOnly,
-        tags: payloadOverride?.tags ?? [],
-      };
-
-      const result = await window.api.snippets.create(payload);
-
-      if (result.success && result.data) {
-        // Add to local state immediately
-        setSnippets(prev => [result.data!, ...prev]);
-        setSelectedSnippetId(result.data.id);
-        // Refresh tags in case counts changed
-        fetchTags();
-        return result.data;
-      } else {
-        setError(result.error || 'Failed to create snippet');
-        return null;
-      }
-    } catch (err) {
-      setError(String(err));
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [fetchTags, showFavoritesOnly]);
-
-  const updateSnippet = React.useCallback(async (update: Partial<Snippet> & { id: string }) => {
-    setIsSaving(true);
-    try {
-      const payload: UpdateSnippetPayload = {
-        id: update.id,
-        title: update.title,
-        language: update.language,
-        content: update.content,
-        notes: update.notes ?? undefined,
-        isFavorite: update.isFavorite,
-        tags: update.tags?.map(t => t.name),
-      };
-
-      const result = await window.api.snippets.update(payload);
-
-      if (result.success && result.data) {
-        // Update local state immediately
-        setSnippets(prev =>
-          prev.map(s => s.id === update.id ? result.data! : s)
-        );
-        // Refresh tags in case counts changed (if tags were updated)
-        if (update.tags !== undefined) {
-          fetchTags();
-        }
-      } else {
-        setError(result.error || 'Failed to update snippet');
-      }
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [fetchTags]);
-
-  const deleteSnippet = React.useCallback(async (id: string) => {
-    setIsSaving(true);
-    try {
-      const result = await window.api.snippets.delete(id);
-
-      if (result.success) {
-        // Remove from local state
-        setSnippets(prev => prev.filter(s => s.id !== id));
-
-        // Select another snippet if the deleted one was selected
-        if (selectedSnippetId === id) {
-          const remaining = snippets.filter(s => s.id !== id);
-          setSelectedSnippetId(remaining[0]?.id ?? null);
-        }
-
-        // Refresh tags as counts may have changed
-        fetchTags();
-      } else {
-        setError(result.error || 'Failed to delete snippet');
-      }
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedSnippetId, snippets, fetchTags]);
-
-  const toggleFavorite = React.useCallback(async (id: string) => {
-    const target = snippets.find((snippet) => snippet.id === id);
-    if (!target) return;
-
-    await updateSnippet({ id, isFavorite: !target.isFavorite });
-  }, [snippets, updateSnippet]);
-
-  const toggleFavoriteMultiple = React.useCallback(async (ids: string[]) => {
-    setIsSaving(true);
-    try {
-      // Determine if we should add or remove favorites (add if any are not favorites)
-      const shouldAddFavorite = ids.some(id => {
-        const snippet = snippets.find(s => s.id === id);
-        return snippet && !snippet.isFavorite;
-      });
-
-      for (const id of ids) {
-        const target = snippets.find(s => s.id === id);
-        if (target && target.isFavorite !== shouldAddFavorite) {
-          await window.api.snippets.update({ id, isFavorite: shouldAddFavorite });
-        }
-      }
-      await fetchSnippets();
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [snippets, fetchSnippets]);
-
-  const deleteMultipleSnippets = React.useCallback(async (ids: string[]) => {
-    setIsSaving(true);
-    try {
-      for (const id of ids) {
-        await window.api.snippets.delete(id);
-      }
-      // Remove from local state
-      setSnippets(prev => prev.filter(s => !ids.includes(s.id)));
-      // Clear multi-selection
-      setSelectedSnippetIds(new Set());
-      // Select another snippet if current was deleted
-      if (selectedSnippetId && ids.includes(selectedSnippetId)) {
-        const remaining = snippets.filter(s => !ids.includes(s.id));
-        setSelectedSnippetId(remaining[0]?.id ?? null);
-      }
-      fetchTags();
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedSnippetId, snippets, fetchTags]);
-
-  // Tag CRUD operations
-  const createTag = React.useCallback(async (name: string): Promise<Tag | null> => {
-    setIsSaving(true);
-    try {
-      const result = await window.api.tags.create(name);
-      if (result.success && result.data) {
-        await fetchTags();
-        return result.data;
-      } else {
-        setError(result.error || 'Failed to create tag');
-        return null;
-      }
-    } catch (err) {
-      setError(String(err));
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [fetchTags]);
-
-  const updateTag = React.useCallback(async (id: string, name: string): Promise<Tag | null> => {
-    setIsSaving(true);
-    try {
-      const result = await window.api.tags.update(id, name);
-      if (result.success && result.data) {
-        await fetchTags();
-        // Also refresh snippets to update tag names in snippet list
-        await fetchSnippets();
-        return result.data;
-      } else {
-        setError(result.error || 'Failed to update tag');
-        return null;
-      }
-    } catch (err) {
-      setError(String(err));
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [fetchTags, fetchSnippets]);
-
-  const deleteTag = React.useCallback(async (id: string): Promise<boolean> => {
-    setIsSaving(true);
-    try {
-      const result = await window.api.tags.delete(id);
-      if (result.success) {
-        // Remove from selected tags if it was selected
-        setSelectedTagIds(prev => prev.filter(tagId => tagId !== id));
-        await fetchTags();
-        // Refresh snippets to update tag lists
-        await fetchSnippets();
-        return true;
-      } else {
-        setError(result.error || 'Failed to delete tag');
-        return false;
-      }
-    } catch (err) {
-      setError(String(err));
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [fetchTags, fetchSnippets]);
-
-  const value: SnippetContextType = {
-    snippets,
-    tags,
-    selectedSnippetId,
-    selectedSnippetIds,
-    selectedTagIds,
-    searchQuery,
-    showFavoritesOnly,
-    isLoading,
-    isSaving,
-    error,
-    selectedSnippet,
-    filteredSnippets,
-    setSelectedSnippetId,
-    setSelectedSnippetIds,
-    setSelectedTagIds,
-    setSearchQuery,
-    setShowFavoritesOnly,
-    createSnippet,
-    updateSnippet,
-    toggleFavorite,
-    toggleFavoriteMultiple,
-    deleteSnippet,
-    deleteMultipleSnippets,
-    refreshData,
-    createTag,
-    updateTag,
-    deleteTag,
-  };
-
-  return (
-    <SnippetContext.Provider value={value}>
-      {children}
-    </SnippetContext.Provider>
-  );
+  return <>{children}</>;
 }

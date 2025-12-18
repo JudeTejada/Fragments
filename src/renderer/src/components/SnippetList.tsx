@@ -1,4 +1,4 @@
-import { useSnippetContext } from '@/context/SnippetContext'
+import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -119,19 +119,17 @@ function SnippetRowSkeleton() {
 }
 
 export function SnippetList() {
-  const {
-    filteredSnippets,
-    selectedSnippetId,
-    setSelectedSnippetId,
-    searchQuery,
-    showFavoritesOnly,
-    createSnippet,
-    deleteSnippet,
-    deleteMultipleSnippets,
-    toggleFavoriteMultiple,
-    isLoading,
-    isSaving
-  } = useSnippetContext()
+  const filteredSnippets = useFilteredSnippets()
+  const selectedSnippetId = useSnippetState((state) => state.selectedSnippetId)
+  const searchQuery = useSnippetState((state) => state.searchQuery)
+  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
+  const isLoading = useSnippetState((state) => state.isLoading)
+  const isSaving = useSnippetState((state) => state.isSaving)
+  const setSelectedSnippetId = useSnippetActions((actions) => actions.setSelectedSnippetId)
+  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
+  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
+  const deleteMultipleSnippets = useSnippetActions((actions) => actions.deleteMultipleSnippets)
+  const toggleFavoriteMultiple = useSnippetActions((actions) => actions.toggleFavoriteMultiple)
 
   // Multi-select hook
   const {

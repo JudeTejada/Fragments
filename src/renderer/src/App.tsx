@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { SnippetProvider, useSnippetContext } from '@/context/SnippetContext'
+import { SnippetProvider, useSnippetActions } from '@/context/SnippetContext'
 import { SnippetSidebar } from '@/components/SnippetSidebar'
 import { SnippetList } from '@/components/SnippetList'
 import { SnippetDetail } from '@/components/SnippetDetail'
@@ -11,7 +11,7 @@ import { ToastProvider, toastManager } from '@/components/ui/toast'
 
 // Inner component that has access to context
 function AppContent() {
-  const { createSnippet } = useSnippetContext()
+  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
   const [quickCapture, setQuickCapture] = React.useState<{ open: boolean; content: string }>({
     open: false,
     content: ''
