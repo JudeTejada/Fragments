@@ -9,7 +9,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/compo
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen, Star } from 'lucide-react';
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxPopup,
+  ComboboxList,
+  ComboboxItem,
+} from '@/components/ui/combobox';
+import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen, Star, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types';
 import { useAiForSnippet } from '@/hooks/useAiForSnippet';
@@ -35,7 +42,10 @@ const ACTION_LABELS: Record<AiActionType, string> = {
 
 export function SnippetDetail() {
   const selectedSnippet = useSelectedSnippet();
-  const isSaving = useSnippetValues((state) => state.isSaving);
+  const { isSaving, tags } = useSnippetValues(
+    (state) => ({ isSaving: state.isSaving, tags: state.tags }),
+    shallow
+  );
   const { updateSnippet, deleteSnippet, toggleFavorite } = useSnippetActions(
     (state) => ({
       updateSnippet: state.updateSnippet,
@@ -120,17 +130,33 @@ export function SnippetDetail() {
     });
   };
 
-  // Handle adding new tag
-  const handleAddTag = () => {
-    if (!selectedSnippet || !tagInput.trim()) return;
-    const newTag = {
-      id: crypto.randomUUID(),
-      name: tagInput.trim().toLowerCase(),
-    };
-    updateSnippet({
-      id: selectedSnippet.id,
-      tags: [...selectedSnippet.tags, newTag],
-    });
+  // Handle adding a tag (existing or new)
+  const handleAddTag = (tagValue: string | null) => {
+    if (!selectedSnippet || !tagValue) return;
+
+    // Check if it's an existing tag ID or a new tag name
+    const existingTag = tags.find(t => t.id === tagValue);
+
+    if (existingTag) {
+      // Add existing tag (check if already assigned)
+      if (selectedSnippet.tags.some(t => t.id === existingTag.id)) return;
+      updateSnippet({
+        id: selectedSnippet.id,
+        tags: [...selectedSnippet.tags, { id: existingTag.id, name: existingTag.name }],
+      });
+    } else {
+      // Create new tag with the input value
+      const newTag = {
+        id: crypto.randomUUID(),
+        name: tagValue.trim().toLowerCase(),
+      };
+      // Check if tag with same name already exists
+      if (selectedSnippet.tags.some(t => t.name.toLowerCase() === newTag.name)) return;
+      updateSnippet({
+        id: selectedSnippet.id,
+        tags: [...selectedSnippet.tags, newTag],
+      });
+    }
     setTagInput('');
   };
 
@@ -246,42 +272,79 @@ export function SnippetDetail() {
                 </SelectPopup>
               </Select>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {selectedSnippet.tags.map((tag) => (
                   <Badge
                     key={tag.id}
                     variant="secondary"
-                    className="gap-1 pr-1"
+                    className="gap-1 pr-1 h-6 text-xs"
                   >
                     #{tag.name}
                     <button
                       onClick={() => handleRemoveTag(tag.id)}
-                      className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
                       aria-label={`Remove ${tag.name}`}
                     >
                       <X className="size-3" />
                     </button>
                   </Badge>
                 ))}
-                <div className="flex items-center gap-1">
-                  <Input
+                <Combobox
+                  value={null}
+                  onValueChange={handleAddTag}
+                >
+                  <ComboboxInput
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                    placeholder="Add tag..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && tagInput.trim()) {
+                        e.preventDefault();
+                        handleAddTag(tagInput.trim());
+                      }
+                    }}
+                    placeholder="+ tag"
                     size="sm"
-                    className="w-24 h-6 text-xs"
+                    className="!h-6 !w-16 !min-w-0 !border-0 !bg-transparent !px-1.5 !text-xs !shadow-none focus:!w-24 focus:!ring-0 transition-all [&_input]:!p-0 [&_input]:!h-5"
+                    showTrigger={false}
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6"
-                    onClick={handleAddTag}
-                    disabled={!tagInput.trim()}
-                  >
-                    <Plus className="size-3" />
-                  </Button>
-                </div>
+                  <ComboboxPopup className="min-w-44">
+                    <ComboboxList>
+                      {(() => {
+                        const availableTags = tags
+                          .filter(t => !selectedSnippet.tags.some(st => st.id === t.id))
+                          .filter(t => !tagInput || t.name.toLowerCase().includes(tagInput.toLowerCase()));
+
+                        const canCreateNew = tagInput.trim() && !tags.some(t => t.name.toLowerCase() === tagInput.trim().toLowerCase());
+
+                        if (availableTags.length === 0 && !canCreateNew) {
+                          return <div className="py-2 px-3 text-center text-xs text-muted-foreground">No tags found</div>;
+                        }
+
+                        return (
+                          <>
+                            {availableTags.map((tag) => (
+                              <ComboboxItem key={tag.id} value={tag.id} className="text-sm">
+                                <div className="flex items-center gap-2 w-full col-span-2">
+                                  <Hash className="size-3 text-muted-foreground shrink-0" />
+                                  <span className="truncate">{tag.name}</span>
+                                  <span className="ml-auto text-[10px] text-muted-foreground/70 tabular-nums">{tag.count}</span>
+                                </div>
+                              </ComboboxItem>
+                            ))}
+                            {canCreateNew && (
+                              <ComboboxItem value={tagInput.trim()} className="text-sm">
+                                <div className="flex items-center gap-2 w-full col-span-2 text-primary">
+                                  <Plus className="size-3 shrink-0" />
+                                  <span>Create <span className="font-medium">#{tagInput.trim()}</span></span>
+                                </div>
+                              </ComboboxItem>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </ComboboxList>
+                  </ComboboxPopup>
+                </Combobox>
               </div>
             </div>
           </div>

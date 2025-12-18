@@ -125,6 +125,51 @@ export function registerIPCHandlers(): void {
     }
   });
 
+  /**
+   * Create a new tag
+   */
+  ipcMain.handle(IPC_CHANNELS.TAGS_CREATE, (_event, args: { name: string }) => {
+    try {
+      const tag = TagRepository.create(args.name);
+      return { success: true, data: tag };
+    } catch (error) {
+      console.error('Error creating tag:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  /**
+   * Update a tag's name
+   */
+  ipcMain.handle(IPC_CHANNELS.TAGS_UPDATE, (_event, args: { id: string; name: string }) => {
+    try {
+      const tag = TagRepository.update(args.id, args.name);
+      if (!tag) {
+        return { success: false, error: 'Tag not found' };
+      }
+      return { success: true, data: tag };
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  /**
+   * Delete a tag (removes from snippets, does not delete snippets)
+   */
+  ipcMain.handle(IPC_CHANNELS.TAGS_DELETE, (_event, args: { id: string }) => {
+    try {
+      const deleted = TagRepository.delete(args.id);
+      if (!deleted) {
+        return { success: false, error: 'Tag not found' };
+      }
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
   // ========================================
   // Settings Handlers
   // ========================================
