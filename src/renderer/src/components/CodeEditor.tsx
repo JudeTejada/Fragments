@@ -28,67 +28,110 @@ const languageExtensions: Record<string, () => ReturnType<typeof javascript>> = 
   markdown: () => markdown(),
 };
 
-const auroraHighlightStyle = HighlightStyle.define([
+const cursorDarkHighlightStyle = HighlightStyle.define([
   {
     tag: [tags.keyword, tags.modifier, tags.operatorKeyword, tags.controlKeyword],
-    color: '#C792EA',
-    fontWeight: 600,
+    color: '#C586C0',
+    fontWeight: 500,
   },
   {
     tag: [tags.string, tags.special(tags.string), tags.regexp, tags.docString],
-    color: '#7CE38B',
+    color: '#CE9178',
   },
   {
     tag: [tags.number, tags.bool, tags.atom],
-    color: '#F5906C',
+    color: '#B5CEA8',
   },
   {
     tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    color: '#82AFFF',
+    color: '#DCDCAA',
   },
   {
     tag: [tags.variableName, tags.self, tags.propertyName],
-    color: '#E1EFFF',
+    color: '#9CDCFE',
   },
   {
     tag: [tags.typeName, tags.className, tags.tagName],
-    color: '#FFD580',
+    color: '#4EC9B0',
   },
   {
     tag: [tags.attributeName],
-    color: '#FF7BC3',
+    color: '#9CDCFE',
   },
   {
     tag: [tags.comment, tags.lineComment, tags.blockComment],
-    color: '#6E7C94',
+    color: '#6A9955',
     fontStyle: 'italic',
   },
   {
     tag: [tags.punctuation, tags.separator],
-    color: 'rgba(226, 232, 240, 0.6)',
+    color: '#D4D4D4',
   },
 ]);
 
-const auroraTheme = EditorView.theme({
+// Cursor-inspired colors for LIGHT mode (darker for contrast)
+const cursorLightHighlightStyle = HighlightStyle.define([
+  {
+    tag: [tags.keyword, tags.modifier, tags.operatorKeyword, tags.controlKeyword],
+    color: '#AF00DB',
+    fontWeight: 500,
+  },
+  {
+    tag: [tags.string, tags.special(tags.string), tags.regexp, tags.docString],
+    color: '#A31515',
+  },
+  {
+    tag: [tags.number, tags.bool, tags.atom],
+    color: '#098658',
+  },
+  {
+    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
+    color: '#795E26',
+  },
+  {
+    tag: [tags.variableName, tags.self, tags.propertyName],
+    color: '#001080',
+  },
+  {
+    tag: [tags.typeName, tags.className, tags.tagName],
+    color: '#267F99',
+  },
+  {
+    tag: [tags.attributeName],
+    color: '#0451A5',
+  },
+  {
+    tag: [tags.comment, tags.lineComment, tags.blockComment],
+    color: '#008000',
+    fontStyle: 'italic',
+  },
+  {
+    tag: [tags.punctuation, tags.separator],
+    color: '#383a42',
+  },
+]);
+
+const cursorTheme = EditorView.theme({
   '&': {
     backgroundColor: 'transparent',
-    fontSize: '13.5px',
+    fontSize: '13px',
     fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace',
   },
   '.cm-content': {
-    padding: '18px 0 32px',
+    padding: '16px 0',
     caretColor: 'var(--primary)',
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
-    lineHeight: '1.65',
+    lineHeight: '1.6',
   },
   '.cm-line': {
-    padding: '0 22px',
+    padding: '0 16px',
   },
   '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 14px 0 0',
-    color: 'color-mix(in srgb, var(--muted-foreground) 85%, transparent)',
+    padding: '0 12px 0 0',
+    color: '#858585',
+    fontSize: '12px',
   },
   '.cm-gutters': {
     backgroundColor: 'transparent',
@@ -98,29 +141,27 @@ const auroraTheme = EditorView.theme({
     color: 'var(--foreground)',
   },
   '.cm-activeLine': {
-    backgroundColor: 'color-mix(in srgb, var(--accent) 60%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)',
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'color-mix(in srgb, var(--primary) 20%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--primary) 15%, transparent)',
   },
   '.cm-cursor': {
     borderLeftColor: 'var(--primary)',
-    borderLeftWidth: '2px',
+    borderLeftWidth: '1.5px',
   },
   '.cm-foldPlaceholder': {
-    backgroundColor: 'color-mix(in srgb, var(--accent) 40%, transparent)',
+    backgroundColor: 'var(--muted)',
     color: 'var(--muted-foreground)',
   },
   '.cm-tooltip': {
-    border: '1px solid color-mix(in srgb, var(--border) 80%, transparent)',
-    backgroundColor: 'color-mix(in srgb, var(--background) 95%, transparent)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--popover)',
   },
   '.cm-panels': {
     borderTop: '1px solid var(--border)',
   },
 });
-
-const DEFAULT_EXTENSIONS = [auroraTheme, syntaxHighlighting(auroraHighlightStyle), EditorView.lineWrapping];
 
 type CopyState = 'idle' | 'copying' | 'copied';
 
@@ -141,8 +182,36 @@ export function CodeEditor({
   className,
   placeholder = 'Enter your code here...',
 }: CodeEditorProps) {
+  // Detect dark mode
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isDark = document.documentElement.classList.contains('dark');
+          setIsDarkMode(isDark);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const extensions = React.useMemo(() => {
-    const exts = [...DEFAULT_EXTENSIONS];
+    // Use appropriate color scheme based on theme
+    const highlightStyle = isDarkMode ? cursorDarkHighlightStyle : cursorLightHighlightStyle;
+    const exts = [cursorTheme, syntaxHighlighting(highlightStyle), EditorView.lineWrapping];
 
     const langExt = languageExtensions[language];
     if (langExt) {
@@ -150,7 +219,7 @@ export function CodeEditor({
     }
 
     return exts;
-  }, [language]);
+  }, [language, isDarkMode]);
 
   const [copyState, setCopyState] = React.useState<CopyState>('idle');
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -213,106 +282,73 @@ export function CodeEditor({
   return (
     <div
       className={cn(
-        'group relative isolate flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_35px_70px_-35px_rgba(15,23,42,0.85)] backdrop-blur',
-        'focus-within:border-primary/60 focus-within:shadow-[0_40px_80px_-32px_rgba(56,189,248,0.45)]',
+        'group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card',
         className
       )}
       data-focused={isFocused ? 'true' : undefined}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-65 transition-opacity duration-500 group-focus-within:opacity-90">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(124,228,187,0.16),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_0%,rgba(99,102,241,0.2),transparent_50%)]" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-      </div>
-
-      <div className="relative z-10 flex items-center justify-between border-b border-white/10 bg-white/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-muted-foreground backdrop-blur-lg dark:border-white/10 dark:bg-white/5 dark:text-muted-foreground/80">
-        <div className="flex flex-wrap items-center gap-3 text-[10px] tracking-[0.4em]">
-          <span className="flex items-center gap-2">
-            <span className="relative inline-flex h-2.5 w-2.5">
-              <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/40" aria-hidden />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-            </span>
-            <span className="font-semibold text-muted-foreground dark:text-muted-foreground/90">
-              {languageLabel}
-            </span>
+      <div className="relative flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-foreground">
+            {languageLabel}
           </span>
-          <span className="rounded-full border border-white/30 bg-white/70 px-2 py-0.5 text-[10px] font-medium tracking-normal text-muted-foreground shadow-sm dark:border-white/5 dark:bg-white/10 dark:text-muted-foreground/80">
-            {readOnly ? 'Read only' : 'Live editing'}
+          <span className="text-xs text-muted-foreground">
+            {readOnly ? 'Read only' : 'Editing'}
           </span>
         </div>
 
-        <div className="relative flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="relative size-8 rounded-full border border-white/30 bg-white/70 text-foreground shadow-sm backdrop-blur-lg transition-all hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-white/90"
-                  onClick={handleCopy}
-                  disabled={!value.length}
-                >
-                  <span className="sr-only">Copy code</span>
-                  <AnimatePresence mode="wait" initial={false}>
-                    {copyState === 'copied' ? (
-                      <motion.span
-                        key="copied"
-                        initial={{ scale: 0.6, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.6, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="text-emerald-500"
-                      >
-                        <Check className="size-4" />
-                      </motion.span>
-                    ) : copyState === 'copying' ? (
-                      <motion.span
-                        key="copying"
-                        initial={{ rotate: -45, opacity: 0 }}
-                        animate={{ rotate: 0, opacity: 1 }}
-                        exit={{ rotate: 45, opacity: 0 }}
-                      >
-                        <Loader2 className="size-4 animate-spin text-primary" />
-                      </motion.span>
-                    ) : (
-                      <motion.span
-                        key="idle"
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Copy className="size-4" />
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  <div className="absolute inset-0 rounded-full bg-emerald-400/20 opacity-0 blur-xl transition-opacity duration-300 data-[copied=true]:opacity-100" data-copied={copyState === 'copied'} />
-                </Button>
-              }
-            />
-            <TooltipPopup>{copyState === 'copied' ? 'Copied!' : 'Copy to clipboard'}</TooltipPopup>
-          </Tooltip>
-
-          <AnimatePresence>
-            {copyState === 'copied' && (
-              <motion.span
-                key="copy-feedback"
-                initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-full border border-emerald-300/60 bg-emerald-400/90 px-2.5 py-0.5 text-[11px] font-medium text-white shadow-lg shadow-emerald-500/30"
-                role="status"
-                aria-live="polite"
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                onClick={handleCopy}
+                disabled={!value.length}
               >
-                Copied!
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </div>
+                <span className="sr-only">Copy code</span>
+                <AnimatePresence mode="wait" initial={false}>
+                  {copyState === 'copied' ? (
+                    <motion.span
+                      key="copied"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="text-success"
+                    >
+                      <Check className="size-4" />
+                    </motion.span>
+                  ) : copyState === 'copying' ? (
+                    <motion.span
+                      key="copying"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <Loader2 className="size-4 animate-spin" />
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="idle"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Copy className="size-4" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </Button>
+            }
+          />
+          <TooltipPopup>{copyState === 'copied' ? 'Copied!' : 'Copy to clipboard'}</TooltipPopup>
+        </Tooltip>
       </div>
 
-      <div className="relative z-10 flex-1" style={{ minHeight: 'inherit' }}>
+      <div className="relative flex-1" style={{ minHeight: 'inherit' }}>
         <CodeMirror
           value={value}
           onChange={handleEditorChange}
@@ -334,14 +370,6 @@ export function CodeEditor({
           onFocus={handleFocus}
           onBlur={handleBlur}
           style={{ minHeight: 'inherit' }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-4 bottom-0 h-16"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(2, 6, 23, 0) 0%, color-mix(in srgb, var(--background) 85%, transparent) 90%)',
-          }}
         />
       </div>
     </div>

@@ -155,7 +155,7 @@ export function SnippetDetail() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
+    <div className="flex flex-1 flex-col bg-background relative">
       <ScrollArea className="flex-1">
         <div className="mx-auto max-w-4xl p-6 space-y-6">
           {/* Header */}

@@ -1,4 +1,4 @@
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+  type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export class OllamaClient {
   constructor(
