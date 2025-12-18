@@ -11,6 +11,9 @@ export const IPC_CHANNELS = {
 
   // Tags
   TAGS_LIST: 'tags:list',
+  TAGS_CREATE: 'tags:create',
+  TAGS_UPDATE: 'tags:update',
+  TAGS_DELETE: 'tags:delete',
 
   // Settings
   SETTINGS_GET: 'settings:get',
