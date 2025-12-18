@@ -29,6 +29,10 @@ type SnippetActions = {
   deleteSnippet: (id: string) => Promise<void>;
   deleteMultipleSnippets: (ids: string[]) => Promise<void>;
   refreshData: () => Promise<void>;
+  // Tag actions
+  createTag: (name: string) => Promise<Tag | null>;
+  updateTag: (id: string, name: string) => Promise<Tag | null>;
+  deleteTag: (id: string) => Promise<boolean>;
 };
 
 type SnippetStore = SnippetState & SnippetActions;
@@ -226,6 +230,62 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         fetchTags();
       } catch (err) {
         set({ error: String(err) });
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    createTag: async (name) => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.create(name);
+        if (result.success && result.data) {
+          await fetchTags();
+          return result.data;
+        }
+        set({ error: result.error || 'Failed to create tag' });
+        return null;
+      } catch (err) {
+        set({ error: String(err) });
+        return null;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    updateTag: async (id, name) => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.update(id, name);
+        if (result.success && result.data) {
+          await fetchTags();
+          await fetchSnippets();
+          return result.data;
+        }
+        set({ error: result.error || 'Failed to update tag' });
+        return null;
+      } catch (err) {
+        set({ error: String(err) });
+        return null;
+      } finally {
+        set({ isSaving: false });
+      }
+    },
+    deleteTag: async (id) => {
+      set({ isSaving: true });
+      try {
+        const result = await window.api.tags.delete(id);
+        if (result.success) {
+          set((state) => ({
+            selectedTagIds: state.selectedTagIds.filter((tagId) => tagId !== id),
+          }));
+          await fetchTags();
+          await fetchSnippets();
+          return true;
+        }
+        set({ error: result.error || 'Failed to delete tag' });
+        return false;
+      } catch (err) {
+        set({ error: String(err) });
+        return false;
       } finally {
         set({ isSaving: false });
       }

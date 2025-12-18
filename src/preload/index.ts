@@ -35,6 +35,15 @@ const api = {
   tags: {
     list: (): Promise<IPCResponse<Tag[]>> =>
       ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
+
+    create: (name: string): Promise<IPCResponse<Tag>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_CREATE, { name }),
+
+    update: (id: string, name: string): Promise<IPCResponse<Tag>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_UPDATE, { id, name }),
+
+    delete: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { id }),
   },
 
   settings: {
