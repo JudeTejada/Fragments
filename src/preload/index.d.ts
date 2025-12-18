@@ -20,6 +20,9 @@ interface CodeSnippetsAPI {
   }
   tags: {
     list: () => Promise<IPCResponse<Tag[]>>
+    create: (name: string) => Promise<IPCResponse<Tag>>
+    update: (id: string, name: string) => Promise<IPCResponse<Tag>>
+    delete: (id: string) => Promise<IPCResponse<boolean>>
   }
   settings: {
     get: () => Promise<IPCResponse<Settings>>

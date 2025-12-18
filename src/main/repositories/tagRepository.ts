@@ -129,4 +129,90 @@ export const TagRepository = {
 
     return result.changes;
   },
+
+  /**
+   * Create a new standalone tag
+   */
+  create(name: string): Tag {
+    const db = getDatabase();
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      throw new Error('Tag name cannot be empty');
+    }
+
+    // Check if tag already exists (case-insensitive)
+    const existing = db.prepare('SELECT id, name FROM tags WHERE LOWER(name) = LOWER(?)').get(trimmedName) as TagRow | undefined;
+    if (existing) {
+      return {
+        id: existing.id,
+        name: existing.name,
+        count: 0,
+      };
+    }
+
+    const id = generateId();
+    db.prepare('INSERT INTO tags (id, name) VALUES (?, ?)').run(id, trimmedName);
+
+    return {
+      id,
+      name: trimmedName,
+      count: 0,
+    };
+  },
+
+  /**
+   * Update a tag's name
+   */
+  update(id: string, name: string): Tag | null {
+    const db = getDatabase();
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      throw new Error('Tag name cannot be empty');
+    }
+
+    // Check if tag exists
+    const existing = this.get(id);
+    if (!existing) {
+      return null;
+    }
+
+    // Check if another tag with this name exists (case-insensitive)
+    const duplicate = db.prepare('SELECT id FROM tags WHERE LOWER(name) = LOWER(?) AND id != ?').get(trimmedName, id) as { id: string } | undefined;
+    if (duplicate) {
+      throw new Error('A tag with this name already exists');
+    }
+
+    db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(trimmedName, id);
+
+    return {
+      ...existing,
+      name: trimmedName,
+    };
+  },
+
+  /**
+   * Delete a tag and remove it from all snippets
+   * Note: This does NOT delete the snippets, only removes the tag association
+   */
+  delete(id: string): boolean {
+    const db = getDatabase();
+
+    // Check if tag exists
+    const existing = this.get(id);
+    if (!existing) {
+      return false;
+    }
+
+    const transaction = db.transaction(() => {
+      // Remove tag from all snippets
+      db.prepare('DELETE FROM snippet_tags WHERE tag_id = ?').run(id);
+      // Delete the tag itself
+      db.prepare('DELETE FROM tags WHERE id = ?').run(id);
+    });
+
+    transaction();
+    return true;
+  },
 };
