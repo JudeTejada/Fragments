@@ -10,10 +10,13 @@ import {
   EmptyDescription,
   EmptyContent
 } from '@/components/ui/empty'
-import { Code2, Plus, FileCode, Loader2, Star } from 'lucide-react'
+import { ContextMenu, useContextMenu } from '@/components/ui/context-menu'
+import { useMultiSelect } from '@/hooks/useMultiSelect'
+import { Code2, Plus, FileCode, Loader2, Star, Trash2, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHotkeys } from 'react-hotkeys-hook'
+import * as React from 'react'
 
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
@@ -39,20 +42,34 @@ interface SnippetRowProps {
   updatedAt: string
   isFavorite: boolean
   isSelected: boolean
-  onClick: () => void
+  isMultiSelected: boolean
+  onClick: (e: React.MouseEvent) => void
+  onContextMenu: (e: React.MouseEvent) => void
 }
 
-function SnippetRow({ title, language, tags, updatedAt, isFavorite, isSelected, onClick }: SnippetRowProps) {
+function SnippetRow({
+  title,
+  language,
+  tags,
+  updatedAt,
+  isFavorite,
+  isSelected,
+  isMultiSelected,
+  onClick,
+  onContextMenu
+}: SnippetRowProps) {
   return (
     <button
       onClick={onClick}
+      onContextMenu={onContextMenu}
       data-testid="snippet-row"
       data-title={title}
       className={cn(
         'w-full text-left px-4 py-3 rounded-xl transition-all',
         'hover:bg-accent/50',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        isSelected && 'bg-accent shadow-sm'
+        isSelected && 'bg-accent shadow-sm',
+        isMultiSelected && !isSelected && 'bg-accent/70 ring-1 ring-primary/30'
       )}
     >
       <div className="flex flex-col gap-1.5">
@@ -60,7 +77,7 @@ function SnippetRow({ title, language, tags, updatedAt, isFavorite, isSelected, 
           <h3
             className={cn(
               'font-medium text-sm truncate',
-              isSelected ? 'text-foreground' : 'text-foreground/90'
+              isSelected || isMultiSelected ? 'text-foreground' : 'text-foreground/90'
             )}
           >
             {title}
@@ -110,9 +127,26 @@ export function SnippetList() {
     showFavoritesOnly,
     createSnippet,
     deleteSnippet,
+    deleteMultipleSnippets,
+    toggleFavoriteMultiple,
     isLoading,
     isSaving
   } = useSnippetContext()
+
+  // Multi-select hook
+  const {
+    selectedIds: multiSelectedIds,
+    isMultiSelectMode,
+    handleClick: handleMultiSelectClick,
+    clearSelection,
+    isSelected: isMultiSelected
+  } = useMultiSelect({
+    items: filteredSnippets,
+    getItemId: (s) => s.id,
+  })
+
+  // Context menu hook
+  const contextMenu = useContextMenu()
 
   const hasNoSnippets = filteredSnippets.length === 0 && !isLoading
   const isSearchActive = searchQuery.trim().length > 0
@@ -122,20 +156,112 @@ export function SnippetList() {
       ? 'Favorites'
       : 'All Snippets'
 
+  // Get the effective selection for context menu actions
+  const getEffectiveSelection = React.useCallback((): string[] => {
+    if (multiSelectedIds.size > 0) {
+      return Array.from(multiSelectedIds)
+    }
+    if (contextMenu.targetId) {
+      return [contextMenu.targetId]
+    }
+    if (selectedSnippetId) {
+      return [selectedSnippetId]
+    }
+    return []
+  }, [multiSelectedIds, contextMenu.targetId, selectedSnippetId])
+
+  // Handle snippet click - UX: only change detail view on normal click, not during multi-select
+  const handleSnippetClick = React.useCallback((snippetId: string, index: number, e: React.MouseEvent) => {
+    handleMultiSelectClick(snippetId, index, e)
+
+    // Only update the detail view selection on normal (non-shift) clicks
+    if (!e.shiftKey) {
+      setSelectedSnippetId(snippetId)
+    }
+    // When shift+clicking, keep the detail view on the previously selected snippet
+  }, [handleMultiSelectClick, setSelectedSnippetId])
+
+  // Handle right-click context menu
+  const handleContextMenu = React.useCallback((snippetId: string, e: React.MouseEvent) => {
+    // If right-clicking on an unselected snippet and no multi-selection
+    if (!isMultiSelected(snippetId) && multiSelectedIds.size === 0) {
+      // Select this snippet for detail view
+      setSelectedSnippetId(snippetId)
+    }
+
+    contextMenu.open(e, snippetId)
+  }, [isMultiSelected, multiSelectedIds.size, setSelectedSnippetId, contextMenu])
+
+  // Context menu actions
+  const handleDelete = React.useCallback(async () => {
+    const ids = getEffectiveSelection()
+    if (ids.length === 0) return
+
+    if (ids.length === 1) {
+      await deleteSnippet(ids[0])
+    } else {
+      await deleteMultipleSnippets(ids)
+    }
+    clearSelection()
+  }, [getEffectiveSelection, deleteSnippet, deleteMultipleSnippets, clearSelection])
+
+  const handleAddToFavorites = React.useCallback(async () => {
+    const ids = getEffectiveSelection()
+    if (ids.length === 0) return
+
+    await toggleFavoriteMultiple(ids)
+    clearSelection()
+  }, [getEffectiveSelection, toggleFavoriteMultiple, clearSelection])
+
+  const contextMenuItems = React.useMemo(() => [
+    {
+      label: 'Add to Favourites',
+      icon: <Heart className="size-4" />,
+      onClick: handleAddToFavorites,
+      testId: 'context-menu-favorites',
+      shortcut: '⌘F',
+      shortcutKey: 'f',
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="size-4" />,
+      onClick: handleDelete,
+      variant: 'destructive' as const,
+      testId: 'context-menu-delete',
+      shortcut: '⌫',
+      shortcutKey: 'Backspace',
+    },
+
+  ], [handleAddToFavorites, handleDelete])
+
   // Handle keyboard shortcuts
   useHotkeys(
     'delete, backspace',
     (event) => {
       event.preventDefault()
-      if (selectedSnippetId && !isSaving && filteredSnippets.length > 0) {
+      if (multiSelectedIds.size > 0 && !isSaving) {
+        deleteMultipleSnippets(Array.from(multiSelectedIds))
+        clearSelection()
+      } else if (selectedSnippetId && !isSaving && filteredSnippets.length > 0) {
         deleteSnippet(selectedSnippetId)
       }
     },
     {
-      enableOnFormTags: false, // Don't trigger when typing in input fields
-      description: 'Delete selected snippet'
+      enableOnFormTags: false,
+      description: 'Delete selected snippet(s)'
     },
-    [selectedSnippetId, deleteSnippet, isSaving, filteredSnippets.length]
+    [selectedSnippetId, multiSelectedIds, deleteSnippet, deleteMultipleSnippets, isSaving, filteredSnippets.length, clearSelection]
+  )
+
+  // Clear multi-selection when pressing Escape
+  useHotkeys(
+    'escape',
+    () => {
+      clearSelection()
+      contextMenu.close()
+    },
+    { enableOnFormTags: false },
+    [clearSelection, contextMenu]
   )
 
   return (
@@ -147,6 +273,11 @@ export function SnippetList() {
             {headerTitle}
           </h2>
           {showFavoritesOnly && <Star className="size-4 text-amber-500 fill-amber-400" />}
+          {isMultiSelectMode && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {multiSelectedIds.size} selected
+            </Badge>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -199,7 +330,7 @@ export function SnippetList() {
               )}
             </Empty>
           ) : (
-            filteredSnippets.map((snippet) => (
+            filteredSnippets.map((snippet, index) => (
               <SnippetRow
                 key={snippet.id}
                 id={snippet.id}
@@ -209,12 +340,23 @@ export function SnippetList() {
                 updatedAt={snippet.updatedAt}
                 isFavorite={snippet.isFavorite}
                 isSelected={snippet.id === selectedSnippetId}
-                onClick={() => setSelectedSnippetId(snippet.id)}
+                isMultiSelected={isMultiSelected(snippet.id)}
+                onClick={(e) => handleSnippetClick(snippet.id, index, e)}
+                onContextMenu={(e) => handleContextMenu(snippet.id, e)}
               />
             ))
           )}
         </div>
       </ScrollArea>
+
+      {/* Context Menu */}
+      <ContextMenu
+        open={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={contextMenu.close}
+        items={contextMenuItems}
+        separator={[0]}
+      />
     </div>
   )
 }

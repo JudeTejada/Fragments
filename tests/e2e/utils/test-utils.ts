@@ -100,4 +100,25 @@ export class TestUtils {
     }
     return titles
   }
+
+  async clickSnippet(title: string) {
+    await this.page.getByTestId('snippet-row').filter({ hasText: title }).first().click()
+    await this.page.waitForTimeout(100)
+  }
+
+  async shiftClickSnippet(title: string) {
+    await this.page.getByTestId('snippet-row').filter({ hasText: title }).first().click({ modifiers: ['Shift'] })
+    await this.page.waitForTimeout(100)
+  }
+
+  async rightClickSnippet(title: string) {
+    await this.page.getByTestId('snippet-row').filter({ hasText: title }).first().click({ button: 'right' })
+    await this.page.waitForTimeout(100)
+  }
+
+  async clickContextMenuItem(name: string) {
+    await this.page.getByRole('menuitem', { name }).click()
+    await this.page.waitForTimeout(150)
+  }
 }
+

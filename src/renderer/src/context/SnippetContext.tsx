@@ -6,6 +6,7 @@ interface SnippetContextType {
   snippets: Snippet[];
   tags: Tag[];
   selectedSnippetId: string | null;
+  selectedSnippetIds: Set<string>;
   selectedTagIds: string[];
   searchQuery: string;
   showFavoritesOnly: boolean;
@@ -19,13 +20,16 @@ interface SnippetContextType {
 
   // Actions
   setSelectedSnippetId: (id: string | null) => void;
+  setSelectedSnippetIds: (ids: Set<string>) => void;
   setSelectedTagIds: (ids: string[]) => void;
   setSearchQuery: (query: string) => void;
   setShowFavoritesOnly: React.Dispatch<React.SetStateAction<boolean>>;
   createSnippet: (payload?: Partial<CreateSnippetPayload>) => Promise<Snippet | null>;
   updateSnippet: (update: Partial<Snippet> & { id: string }) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
+  toggleFavoriteMultiple: (ids: string[]) => Promise<void>;
   deleteSnippet: (id: string) => Promise<void>;
+  deleteMultipleSnippets: (ids: string[]) => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -43,6 +47,7 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
   const [snippets, setSnippets] = React.useState<Snippet[]>([]);
   const [tags, setTags] = React.useState<Tag[]>([]);
   const [selectedSnippetId, setSelectedSnippetId] = React.useState<string | null>(null);
+  const [selectedSnippetIds, setSelectedSnippetIds] = React.useState<Set<string>>(new Set());
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = React.useState(false);
@@ -245,10 +250,57 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     await updateSnippet({ id, isFavorite: !target.isFavorite });
   }, [snippets, updateSnippet]);
 
+  const toggleFavoriteMultiple = React.useCallback(async (ids: string[]) => {
+    setIsSaving(true);
+    try {
+      // Determine if we should add or remove favorites (add if any are not favorites)
+      const shouldAddFavorite = ids.some(id => {
+        const snippet = snippets.find(s => s.id === id);
+        return snippet && !snippet.isFavorite;
+      });
+
+      for (const id of ids) {
+        const target = snippets.find(s => s.id === id);
+        if (target && target.isFavorite !== shouldAddFavorite) {
+          await window.api.snippets.update({ id, isFavorite: shouldAddFavorite });
+        }
+      }
+      await fetchSnippets();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [snippets, fetchSnippets]);
+
+  const deleteMultipleSnippets = React.useCallback(async (ids: string[]) => {
+    setIsSaving(true);
+    try {
+      for (const id of ids) {
+        await window.api.snippets.delete(id);
+      }
+      // Remove from local state
+      setSnippets(prev => prev.filter(s => !ids.includes(s.id)));
+      // Clear multi-selection
+      setSelectedSnippetIds(new Set());
+      // Select another snippet if current was deleted
+      if (selectedSnippetId && ids.includes(selectedSnippetId)) {
+        const remaining = snippets.filter(s => !ids.includes(s.id));
+        setSelectedSnippetId(remaining[0]?.id ?? null);
+      }
+      fetchTags();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedSnippetId, snippets, fetchTags]);
+
   const value: SnippetContextType = {
     snippets,
     tags,
     selectedSnippetId,
+    selectedSnippetIds,
     selectedTagIds,
     searchQuery,
     showFavoritesOnly,
@@ -258,13 +310,16 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     selectedSnippet,
     filteredSnippets,
     setSelectedSnippetId,
+    setSelectedSnippetIds,
     setSelectedTagIds,
     setSearchQuery,
     setShowFavoritesOnly,
     createSnippet,
     updateSnippet,
     toggleFavorite,
+    toggleFavoriteMultiple,
     deleteSnippet,
+    deleteMultipleSnippets,
     refreshData,
   };
 
