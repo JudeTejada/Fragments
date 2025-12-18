@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSnippetContext } from '@/context/SnippetContext';
+import { useSelectedSnippet, useSnippetActions, useSnippetValues } from '@/context/SnippetContext';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, Pe
 import { cn } from '@/lib/utils';
 import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types';
 import { useAiForSnippet } from '@/hooks/useAiForSnippet';
+import { shallow } from 'zustand/shallow';
 
 // Auto-save debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -33,7 +34,16 @@ const ACTION_LABELS: Record<AiActionType, string> = {
 };
 
 export function SnippetDetail() {
-  const { selectedSnippet, updateSnippet, deleteSnippet, toggleFavorite, isSaving } = useSnippetContext();
+  const selectedSnippet = useSelectedSnippet();
+  const isSaving = useSnippetValues((state) => state.isSaving);
+  const { updateSnippet, deleteSnippet, toggleFavorite } = useSnippetActions(
+    (state) => ({
+      updateSnippet: state.updateSnippet,
+      deleteSnippet: state.deleteSnippet,
+      toggleFavorite: state.toggleFavorite,
+    }),
+    shallow
+  );
 
   // Local state for editing
   const [title, setTitle] = React.useState('');

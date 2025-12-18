@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
-import { useSnippetContext } from '@/context/SnippetContext';
+import { useSnippetActions } from '@/context/SnippetContext';
 import { SUPPORTED_LANGUAGES } from '@shared/types';
 import { Label } from '@/components/ui/label';
 
@@ -17,7 +17,7 @@ type QuickCaptureModalProps = {
 };
 
 export function QuickCaptureModal({ open, initialContent, onClose }: QuickCaptureModalProps) {
-  const { createSnippet } = useSnippetContext();
+  const createSnippet = useSnippetActions((state) => state.createSnippet);
   const [title, setTitle] = React.useState('');
   const [content, setContent] = React.useState(initialContent);
   const [language, setLanguage] = React.useState('plaintext');

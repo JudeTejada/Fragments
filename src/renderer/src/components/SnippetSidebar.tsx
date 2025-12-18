@@ -16,24 +16,44 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Code2, Hash, Plus, Search, Star } from 'lucide-react';
-import { useSnippetContext } from '@/context/SnippetContext';
+import { useFilteredSnippets, useSnippetActions, useSnippetValues } from '@/context/SnippetContext';
 import { Button } from '@/components/ui/button';
 import { SettingsSheet } from '@/components/SettingsSheet';
 import { cn } from '@/lib/utils';
+import { shallow } from 'zustand/shallow';
 
 export function SnippetSidebar() {
+  const filteredSnippets = useFilteredSnippets();
   const {
     snippets,
     tags,
     selectedTagIds,
     searchQuery,
-    filteredSnippets,
     showFavoritesOnly,
+  } = useSnippetValues(
+    (state) => ({
+      snippets: state.snippets,
+      tags: state.tags,
+      selectedTagIds: state.selectedTagIds,
+      searchQuery: state.searchQuery,
+      showFavoritesOnly: state.showFavoritesOnly,
+    }),
+    shallow
+  );
+  const {
     setSelectedTagIds,
     setSearchQuery,
     setShowFavoritesOnly,
     createSnippet,
-  } = useSnippetContext();
+  } = useSnippetActions(
+    (state) => ({
+      setSelectedTagIds: state.setSelectedTagIds,
+      setSearchQuery: state.setSearchQuery,
+      setShowFavoritesOnly: state.setShowFavoritesOnly,
+      createSnippet: state.createSnippet,
+    }),
+    shallow
+  );
 
   const handleTagClick = (tagId: string) => {
     if (selectedTagIds.includes(tagId)) {

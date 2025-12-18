@@ -1,4 +1,4 @@
-import { useSnippetContext } from '@/context/SnippetContext'
+import { useFilteredSnippets, useSnippetActions, useSnippetValues } from '@/context/SnippetContext'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHotkeys } from 'react-hotkeys-hook'
 import * as React from 'react'
+import { shallow } from 'zustand/shallow'
 
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
@@ -119,19 +120,39 @@ function SnippetRowSkeleton() {
 }
 
 export function SnippetList() {
+  const filteredSnippets = useFilteredSnippets()
   const {
-    filteredSnippets,
     selectedSnippetId,
-    setSelectedSnippetId,
     searchQuery,
     showFavoritesOnly,
+    isLoading,
+    isSaving
+  } = useSnippetValues(
+    (state) => ({
+      selectedSnippetId: state.selectedSnippetId,
+      searchQuery: state.searchQuery,
+      showFavoritesOnly: state.showFavoritesOnly,
+      isLoading: state.isLoading,
+      isSaving: state.isSaving
+    }),
+    shallow
+  )
+  const {
+    setSelectedSnippetId,
     createSnippet,
     deleteSnippet,
     deleteMultipleSnippets,
-    toggleFavoriteMultiple,
-    isLoading,
-    isSaving
-  } = useSnippetContext()
+    toggleFavoriteMultiple
+  } = useSnippetActions(
+    (state) => ({
+      setSelectedSnippetId: state.setSelectedSnippetId,
+      createSnippet: state.createSnippet,
+      deleteSnippet: state.deleteSnippet,
+      deleteMultipleSnippets: state.deleteMultipleSnippets,
+      toggleFavoriteMultiple: state.toggleFavoriteMultiple
+    }),
+    shallow
+  )
 
   // Multi-select hook
   const {
