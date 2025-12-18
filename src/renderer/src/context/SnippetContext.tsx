@@ -31,6 +31,10 @@ interface SnippetContextType {
   deleteSnippet: (id: string) => Promise<void>;
   deleteMultipleSnippets: (ids: string[]) => Promise<void>;
   refreshData: () => Promise<void>;
+  // Tag actions
+  createTag: (name: string) => Promise<Tag | null>;
+  updateTag: (id: string, name: string) => Promise<Tag | null>;
+  deleteTag: (id: string) => Promise<boolean>;
 }
 
 const SnippetContext = React.createContext<SnippetContextType | null>(null);
@@ -296,6 +300,70 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedSnippetId, snippets, fetchTags]);
 
+  // Tag CRUD operations
+  const createTag = React.useCallback(async (name: string): Promise<Tag | null> => {
+    setIsSaving(true);
+    try {
+      const result = await window.api.tags.create(name);
+      if (result.success && result.data) {
+        await fetchTags();
+        return result.data;
+      } else {
+        setError(result.error || 'Failed to create tag');
+        return null;
+      }
+    } catch (err) {
+      setError(String(err));
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchTags]);
+
+  const updateTag = React.useCallback(async (id: string, name: string): Promise<Tag | null> => {
+    setIsSaving(true);
+    try {
+      const result = await window.api.tags.update(id, name);
+      if (result.success && result.data) {
+        await fetchTags();
+        // Also refresh snippets to update tag names in snippet list
+        await fetchSnippets();
+        return result.data;
+      } else {
+        setError(result.error || 'Failed to update tag');
+        return null;
+      }
+    } catch (err) {
+      setError(String(err));
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchTags, fetchSnippets]);
+
+  const deleteTag = React.useCallback(async (id: string): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const result = await window.api.tags.delete(id);
+      if (result.success) {
+        // Remove from selected tags if it was selected
+        setSelectedTagIds(prev => prev.filter(tagId => tagId !== id));
+        await fetchTags();
+        // Refresh snippets to update tag lists
+        await fetchSnippets();
+        return true;
+      } else {
+        setError(result.error || 'Failed to delete tag');
+        return false;
+      }
+    } catch (err) {
+      setError(String(err));
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchTags, fetchSnippets]);
+
   const value: SnippetContextType = {
     snippets,
     tags,
@@ -321,6 +389,9 @@ export function SnippetProvider({ children }: { children: React.ReactNode }) {
     deleteSnippet,
     deleteMultipleSnippets,
     refreshData,
+    createTag,
+    updateTag,
+    deleteTag,
   };
 
   return (

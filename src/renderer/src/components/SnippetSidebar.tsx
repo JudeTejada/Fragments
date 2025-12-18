@@ -15,11 +15,24 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Code2, Hash, Plus, Search, Star } from 'lucide-react';
+import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { useSnippetContext } from '@/context/SnippetContext';
 import { Button } from '@/components/ui/button';
 import { SettingsSheet } from '@/components/SettingsSheet';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverPopup, PopoverClose } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { ContextMenu, useContextMenu } from '@/components/ui/context-menu';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogPopup,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogClose,
+} from '@/components/ui/alert-dialog';
 
 export function SnippetSidebar() {
   const {
@@ -33,7 +46,26 @@ export function SnippetSidebar() {
     setSearchQuery,
     setShowFavoritesOnly,
     createSnippet,
+    createTag,
+    updateTag,
+    deleteTag,
   } = useSnippetContext();
+
+  // State for adding new tag
+  const [newTagName, setNewTagName] = React.useState('');
+  const [isAddTagOpen, setIsAddTagOpen] = React.useState(false);
+
+  // State for editing tag
+  const [editTagName, setEditTagName] = React.useState('');
+  const [editingTagId, setEditingTagId] = React.useState<string | null>(null);
+  const [isEditPopoverOpen, setIsEditPopoverOpen] = React.useState(false);
+
+  // State for delete confirmation
+  const [deletingTagId, setDeletingTagId] = React.useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  // Context menu for tags
+  const tagContextMenu = useContextMenu();
 
   const handleTagClick = (tagId: string) => {
     if (selectedTagIds.includes(tagId)) {
@@ -53,6 +85,84 @@ export function SnippetSidebar() {
     () => snippets.filter(snippet => snippet.isFavorite).length,
     [snippets]
   );
+
+  // Handle create tag
+  const handleCreateTag = async () => {
+    if (newTagName.trim()) {
+      await createTag(newTagName.trim());
+      setNewTagName('');
+      setIsAddTagOpen(false);
+    }
+  };
+
+  // Handle edit tag
+  const handleEditTag = async () => {
+    if (editingTagId && editTagName.trim()) {
+      await updateTag(editingTagId, editTagName.trim());
+      setEditingTagId(null);
+      setEditTagName('');
+      setIsEditPopoverOpen(false);
+    }
+  };
+
+  // Handle delete tag
+  const handleDeleteTag = async () => {
+    if (deletingTagId) {
+      await deleteTag(deletingTagId);
+      setDeletingTagId(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  // Handle tag right-click
+  const handleTagContextMenu = (tagId: string, e: React.MouseEvent) => {
+    tagContextMenu.open(e, tagId);
+  };
+
+  // Start editing a tag
+  const startEditTag = () => {
+    if (tagContextMenu.targetId) {
+      const tag = tags.find(t => t.id === tagContextMenu.targetId);
+      if (tag) {
+        setEditingTagId(tag.id);
+        setEditTagName(tag.name);
+        setIsEditPopoverOpen(true);
+      }
+    }
+    tagContextMenu.close();
+  };
+
+  // Start delete confirmation
+  const startDeleteTag = () => {
+    if (tagContextMenu.targetId) {
+      setDeletingTagId(tagContextMenu.targetId);
+      setIsDeleteDialogOpen(true);
+    }
+    tagContextMenu.close();
+  };
+
+  // Get tag name for delete dialog
+  const deletingTag = React.useMemo(
+    () => tags.find(t => t.id === deletingTagId),
+    [tags, deletingTagId]
+  );
+
+  // Context menu items for tags
+  const tagContextMenuItems = React.useMemo(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil className="size-4" />,
+      onClick: startEditTag,
+      testId: 'context-menu-edit-tag',
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="size-4" />,
+      onClick: startDeleteTag,
+      variant: 'destructive' as const,
+      testId: 'context-menu-delete-tag',
+    },
+  ], [tagContextMenu.targetId]);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -139,17 +249,66 @@ export function SnippetSidebar() {
 
         {/* Tags */}
         <SidebarGroup>
-          <SidebarGroupLabel className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0">
-            Tags
-          </SidebarGroupLabel>
+          <div className="flex items-center justify-between pr-2">
+            <SidebarGroupLabel className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0">
+              Tags
+            </SidebarGroupLabel>
+            <Popover open={isAddTagOpen} onOpenChange={setIsAddTagOpen}>
+              <PopoverTrigger
+                className="group-data-[collapsible=icon]:hidden"
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 rounded-md"
+                    data-testid="add-tag-button"
+                  >
+                    <Plus className="size-3.5" />
+                    <span className="sr-only">Add Tag</span>
+                  </Button>
+                }
+              />
+              <PopoverPopup className="w-64" side="right" align="start">
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Add New Tag</h4>
+                  <Input
+                    data-testid="new-tag-input"
+                    placeholder="Tag name..."
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateTag();
+                      }
+                    }}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <PopoverClose render={<Button variant="outline" size="sm">Cancel</Button>} />
+                    <Button
+                      size="sm"
+                      onClick={handleCreateTag}
+                      disabled={!newTagName.trim()}
+                      data-testid="confirm-add-tag"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </PopoverPopup>
+            </Popover>
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {tags.map((tag) => (
                 <SidebarMenuItem key={tag.id}>
                   <SidebarMenuButton
                     data-testid="tag-filter"
+                    data-tag-id={tag.id}
+                    data-tag-name={tag.name}
                     isActive={selectedTagIds.includes(tag.id)}
                     onClick={() => handleTagClick(tag.id)}
+                    onContextMenu={(e) => handleTagContextMenu(tag.id, e)}
                     tooltip={`#${tag.name}`}
                     className="transition-all duration-200 ease-out"
                   >
@@ -182,6 +341,81 @@ export function SnippetSidebar() {
 
       {/* Rail for collapse/expand interaction */}
       <SidebarRail />
+
+      {/* Tag Context Menu */}
+      <ContextMenu
+        open={tagContextMenu.isOpen}
+        position={tagContextMenu.position}
+        onClose={tagContextMenu.close}
+        items={tagContextMenuItems}
+      />
+
+      {/* Edit Tag Popover - Positioned at context menu location */}
+      <Popover open={isEditPopoverOpen} onOpenChange={setIsEditPopoverOpen}>
+        <PopoverTrigger render={<span />} />
+        <PopoverPopup className="w-64">
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Edit Tag</h4>
+            <Input
+              data-testid="edit-tag-input"
+              placeholder="Tag name..."
+              value={editTagName}
+              onChange={(e) => setEditTagName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleEditTag();
+                }
+              }}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditPopoverOpen(false);
+                  setEditingTagId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleEditTag}
+                disabled={!editTagName.trim()}
+                data-testid="confirm-edit-tag"
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </PopoverPopup>
+      </Popover>
+
+      {/* Delete Tag Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogTrigger render={<span />} />
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the tag "{deletingTag?.name}"?
+              This will remove the tag from all snippets. The snippets themselves will not be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTag}
+              data-testid="confirm-delete-tag"
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
     </Sidebar>
   );
 }
