@@ -304,10 +304,10 @@ export function SnippetDetail() {
                     }}
                     placeholder="+ Tag"
                     size="sm"
-                    className="h-6 w-16 min-w-[3.5rem] !bg-transparent px-1.5 text-xs shadow-none transition-all focus:w-28 focus:ring-0 placeholder:text-muted-foreground/60"
+                    className="h-6 w-16 min-w-[5.5rem] !bg-transparent px-1.5 text-xs shadow-none transition-all focus:w-28 focus:ring-0 placeholder:text-muted-foreground/60"
                     showTrigger={false}
                   />
-                  <ComboboxPopup className="min-w-[180px] p-0">
+                  <ComboboxPopup className="min-w-auto p-0">
                     <ComboboxList className="py-1">
                       {(() => {
                         const availableTags = tags
