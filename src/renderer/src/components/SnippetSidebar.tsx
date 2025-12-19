@@ -40,6 +40,8 @@ export function SnippetSidebar() {
   const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
   const searchQuery = useSnippetState((state) => state.searchQuery)
   const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
+  const trashItems = useSnippetState((state) => state.trashItems)
+  const showTrash = useSnippetState((state) => state.showTrash)
   const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
   const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery)
   const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly)
@@ -96,6 +98,13 @@ export function SnippetSidebar() {
     () => snippets.filter((snippet) => snippet.isFavorite).length,
     [snippets]
   )
+
+  const trashCount = trashItems.length
+
+  // Keep trash badge in sync on load
+  React.useEffect(() => {
+    fetchTrashItems()
+  }, [fetchTrashItems])
 
   // Handle create tag
   const handleCreateTag = async () => {
@@ -262,6 +271,7 @@ export function SnippetSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   data-testid="filter-recently-deleted"
+                  isActive={showTrash}
                   tooltip="Recently Deleted"
                   className="transition-all duration-200 ease-out"
                   onClick={handleRecentlyDeletedClick}
@@ -270,6 +280,12 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     Recently Deleted
                   </span>
+                  <SidebarMenuBadge
+                    data-testid="trash-count"
+                    className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
+                  >
+                    {trashCount}
+                  </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
