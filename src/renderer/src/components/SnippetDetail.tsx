@@ -1,59 +1,76 @@
-import * as React from 'react';
-import { useSelectedSnippet, useSnippetActions, useSnippetState } from '@/context/SnippetContext';
-import { CodeEditor } from '@/components/CodeEditor';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
+import * as React from 'react'
+import { useSelectedSnippet, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { CodeEditor } from '@/components/CodeEditor'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/components/ui/card'
+import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import {
   Combobox,
   ComboboxInput,
   ComboboxPopup,
   ComboboxList,
   ComboboxItem,
-} from '@/components/ui/combobox';
-import { Code2, Trash2, Check, X, Plus, Loader2, Sparkles, MessageSquareText, PencilLine, BookOpen, Star, Hash } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types';
-import { useAiForSnippet } from '@/hooks/useAiForSnippet';
+  ComboboxGroup,
+  ComboboxGroupLabel,
+  ComboboxSeparator
+} from '@/components/ui/combobox'
+import {
+  Code2,
+  Trash2,
+  Check,
+  X,
+  Plus,
+  Loader2,
+  Sparkles,
+  MessageSquareText,
+  PencilLine,
+  BookOpen,
+  Star,
+  Hash,
+  Tag
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types'
+import { useAiForSnippet } from '@/hooks/useAiForSnippet'
 
 // Auto-save debounce hook
 function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
+  const [debouncedValue, setDebouncedValue] = React.useState<T>(value)
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
 
-  return debouncedValue;
+  return debouncedValue
 }
 
 const ACTION_LABELS: Record<AiActionType, string> = {
   explain: 'Explain',
   comment: 'Add comments',
-  usage_example: 'Usage example',
-};
+  usage_example: 'Usage example'
+}
 
 export function SnippetDetail() {
-  const selectedSnippet = useSelectedSnippet();
-  const isSaving = useSnippetState((state) => state.isSaving);
-  const tags = useSnippetState((state) => state.tags);
-  const updateSnippet = useSnippetActions((actions) => actions.updateSnippet);
-  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet);
-  const toggleFavorite = useSnippetActions((actions) => actions.toggleFavorite);
+  const selectedSnippet = useSelectedSnippet()
+  const isSaving = useSnippetState((state) => state.isSaving)
+  const tags = useSnippetState((state) => state.tags)
+  const updateSnippet = useSnippetActions((actions) => actions.updateSnippet)
+  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
+  const toggleFavorite = useSnippetActions((actions) => actions.toggleFavorite)
 
   // Local state for editing
-  const [title, setTitle] = React.useState('');
-  const [content, setContent] = React.useState('');
-  const [notes, setNotes] = React.useState('');
-  const [language, setLanguage] = React.useState('plaintext');
-  const [tagInput, setTagInput] = React.useState('');
-  const [showSaved, setShowSaved] = React.useState(false);
+  const [title, setTitle] = React.useState('')
+  const [content, setContent] = React.useState('')
+  const [notes, setNotes] = React.useState('')
+  const [language, setLanguage] = React.useState('plaintext')
+  const [tagInput, setTagInput] = React.useState('')
+  const [showSaved, setShowSaved] = React.useState(false)
 
   const {
     aiRuns,
@@ -61,108 +78,108 @@ export function SnippetDetail() {
     error: aiError,
     isConfigured: isAiConfigured,
     settingsMessage: aiSettingsMessage,
-    run: runAiAction,
-  } = useAiForSnippet(selectedSnippet?.id ?? null);
+    run: runAiAction
+  } = useAiForSnippet(selectedSnippet?.id ?? null)
 
   // Sync local state when selected snippet changes
   React.useEffect(() => {
     if (selectedSnippet) {
-      setTitle(selectedSnippet.title);
-      setContent(selectedSnippet.content);
-      setNotes(selectedSnippet.notes ?? '');
-      setLanguage(selectedSnippet.language);
+      setTitle(selectedSnippet.title)
+      setContent(selectedSnippet.content)
+      setNotes(selectedSnippet.notes ?? '')
+      setLanguage(selectedSnippet.language)
     }
-  }, [selectedSnippet?.id]);
+  }, [selectedSnippet?.id])
 
   // Debounced values for auto-save
-  const debouncedTitle = useDebounce(title, 500);
-  const debouncedContent = useDebounce(content, 500);
-  const debouncedNotes = useDebounce(notes, 500);
+  const debouncedTitle = useDebounce(title, 500)
+  const debouncedContent = useDebounce(content, 500)
+  const debouncedNotes = useDebounce(notes, 500)
 
   // Auto-save effect
   React.useEffect(() => {
-    if (!selectedSnippet) return;
+    if (!selectedSnippet) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
       debouncedContent !== selectedSnippet.content ||
-      debouncedNotes !== (selectedSnippet.notes ?? '');
+      debouncedNotes !== (selectedSnippet.notes ?? '')
 
     if (hasChanges) {
       updateSnippet({
         id: selectedSnippet.id,
         title: debouncedTitle,
         content: debouncedContent,
-        notes: debouncedNotes || null,
-      });
+        notes: debouncedNotes || null
+      })
 
       // Show saved indicator
-      setShowSaved(true);
-      const timer = setTimeout(() => setShowSaved(false), 2000);
-      return () => clearTimeout(timer);
+      setShowSaved(true)
+      const timer = setTimeout(() => setShowSaved(false), 2000)
+      return () => clearTimeout(timer)
     }
-    return undefined;
-  }, [debouncedTitle, debouncedContent, debouncedNotes, selectedSnippet, updateSnippet]);
+    return undefined
+  }, [debouncedTitle, debouncedContent, debouncedNotes, selectedSnippet, updateSnippet])
 
   // Handle language change (immediate save)
   const handleLanguageChange = (value: string | null) => {
-    if (!value) return;
-    setLanguage(value);
+    if (!value) return
+    setLanguage(value)
     if (selectedSnippet) {
-      updateSnippet({ id: selectedSnippet.id, language: value });
+      updateSnippet({ id: selectedSnippet.id, language: value })
     }
-  };
+  }
 
   // Handle tag removal
   const handleRemoveTag = (tagId: string) => {
-    if (!selectedSnippet) return;
+    if (!selectedSnippet) return
     updateSnippet({
       id: selectedSnippet.id,
-      tags: selectedSnippet.tags.filter(t => t.id !== tagId),
-    });
-  };
+      tags: selectedSnippet.tags.filter((t) => t.id !== tagId)
+    })
+  }
 
   // Handle adding a tag (existing or new)
   const handleAddTag = (tagValue: string | null) => {
-    if (!selectedSnippet || !tagValue) return;
+    if (!selectedSnippet || !tagValue) return
 
     // Check if it's an existing tag ID or a new tag name
-    const existingTag = tags.find(t => t.id === tagValue);
+    const existingTag = tags.find((t) => t.id === tagValue)
 
     if (existingTag) {
       // Add existing tag (check if already assigned)
-      if (selectedSnippet.tags.some(t => t.id === existingTag.id)) return;
+      if (selectedSnippet.tags.some((t) => t.id === existingTag.id)) return
       updateSnippet({
         id: selectedSnippet.id,
-        tags: [...selectedSnippet.tags, { id: existingTag.id, name: existingTag.name }],
-      });
+        tags: [...selectedSnippet.tags, { id: existingTag.id, name: existingTag.name }]
+      })
     } else {
       // Create new tag with the input value
       const newTag = {
         id: crypto.randomUUID(),
-        name: tagValue.trim().toLowerCase(),
-      };
+        name: tagValue.trim().toLowerCase()
+      }
       // Check if tag with same name already exists
-      if (selectedSnippet.tags.some(t => t.name.toLowerCase() === newTag.name)) return;
+      if (selectedSnippet.tags.some((t) => t.name.toLowerCase() === newTag.name)) return
       updateSnippet({
         id: selectedSnippet.id,
-        tags: [...selectedSnippet.tags, newTag],
-      });
+        tags: [...selectedSnippet.tags, newTag]
+      })
     }
-    setTagInput('');
-  };
+    setTagInput('')
+  }
 
   // Handle delete
   const handleDelete = () => {
     if (selectedSnippet) {
-      deleteSnippet(selectedSnippet.id);
+      deleteSnippet(selectedSnippet.id)
     }
-  };
+  }
 
   const handleFavoriteToggle = () => {
-    if (!selectedSnippet) return;
-    toggleFavorite(selectedSnippet.id);
-  };
+    if (!selectedSnippet) return
+    toggleFavorite(selectedSnippet.id)
+  }
 
   if (!selectedSnippet) {
     return (
@@ -173,13 +190,11 @@ export function SnippetDetail() {
               <Code2 className="size-4" />
             </EmptyMedia>
             <EmptyTitle>No snippet selected</EmptyTitle>
-            <EmptyDescription>
-              Select a snippet from the list or create a new one
-            </EmptyDescription>
+            <EmptyDescription>Select a snippet from the list or create a new one</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
-    );
+    )
   }
 
   return (
@@ -194,36 +209,36 @@ export function SnippetDetail() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Snippet title..."
-            className="text-xl font-semibold border-none shadow-none px-0 h-auto bg-transparent focus-visible:ring-0"
-            unstyled
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              variant={selectedSnippet.isFavorite ? 'secondary' : 'ghost'}
-              size="icon"
-              className={cn(
-                'size-8',
-                selectedSnippet.isFavorite
-                  ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                  : 'text-muted-foreground'
-              )}
-              onClick={handleFavoriteToggle}
-            >
-              <Star
-                className={cn(
-                  'size-4',
-                  selectedSnippet.isFavorite ? 'fill-amber-400 text-amber-600' : ''
-                )}
+                className="text-xl font-semibold border-none shadow-none px-0 h-auto bg-transparent focus-visible:ring-0"
+                unstyled
               />
-              <span className="sr-only">
-                {selectedSnippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              </span>
-            </Button>
-            <span
-              className={cn(
-                'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
-                (isSaving || showSaved) ? 'opacity-100' : 'opacity-0'
-              )}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={selectedSnippet.isFavorite ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className={cn(
+                    'size-8',
+                    selectedSnippet.isFavorite
+                      ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                      : 'text-muted-foreground'
+                  )}
+                  onClick={handleFavoriteToggle}
+                >
+                  <Star
+                    className={cn(
+                      'size-4',
+                      selectedSnippet.isFavorite ? 'fill-amber-400 text-amber-600' : ''
+                    )}
+                  />
+                  <span className="sr-only">
+                    {selectedSnippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  </span>
+                </Button>
+                <span
+                  className={cn(
+                    'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
+                    isSaving || showSaved ? 'opacity-100' : 'opacity-0'
+                  )}
                 >
                   {isSaving ? (
                     <>
@@ -266,11 +281,7 @@ export function SnippetDetail() {
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {selectedSnippet.tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="gap-1 pr-1 h-6 text-xs"
-                  >
+                  <Badge key={tag.id} variant="secondary" className="gap-1 pr-1 h-6 text-xs">
                     #{tag.name}
                     <button
                       onClick={() => handleRemoveTag(tag.id)}
@@ -281,58 +292,80 @@ export function SnippetDetail() {
                     </button>
                   </Badge>
                 ))}
-                <Combobox
-                  value={null}
-                  onValueChange={handleAddTag}
-                >
+                <Combobox value={null} onValueChange={handleAddTag}>
                   <ComboboxInput
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && tagInput.trim()) {
-                        e.preventDefault();
-                        handleAddTag(tagInput.trim());
+                        e.preventDefault()
+                        handleAddTag(tagInput.trim())
                       }
                     }}
-                    placeholder="+ tag"
+                    placeholder="+ Tag"
                     size="sm"
-                    className="!h-6 !w-16 !min-w-0 !border-0 !bg-transparent !px-1.5 !text-xs !shadow-none focus:!w-24 focus:!ring-0 transition-all [&_input]:!p-0 [&_input]:!h-5"
+                    className="h-6 w-16 min-w-[3.5rem] !bg-transparent px-1.5 text-xs shadow-none transition-all focus:w-28 focus:ring-0 placeholder:text-muted-foreground/60"
                     showTrigger={false}
                   />
-                  <ComboboxPopup className="min-w-44">
-                    <ComboboxList>
+                  <ComboboxPopup className="min-w-[180px] p-0">
+                    <ComboboxList className="py-1">
                       {(() => {
                         const availableTags = tags
-                          .filter(t => !selectedSnippet.tags.some(st => st.id === t.id))
-                          .filter(t => !tagInput || t.name.toLowerCase().includes(tagInput.toLowerCase()));
+                          .filter((t) => !selectedSnippet.tags.some((st) => st.id === t.id))
+                          .filter(
+                            (t) =>
+                              !tagInput || t.name.toLowerCase().includes(tagInput.toLowerCase())
+                          )
 
-                        const canCreateNew = tagInput.trim() && !tags.some(t => t.name.toLowerCase() === tagInput.trim().toLowerCase());
+                        const canCreateNew =
+                          tagInput.trim() &&
+                          !tags.some((t) => t.name.toLowerCase() === tagInput.trim().toLowerCase())
 
                         if (availableTags.length === 0 && !canCreateNew) {
-                          return <div className="py-2 px-3 text-center text-xs text-muted-foreground">No tags found</div>;
+                          return (
+                            <div className="flex flex-col items-center justify-center py-4 px-2 text-center text-xs text-muted-foreground">
+                              <Tag className="mb-2 size-4 opacity-50" />
+                              <p>No tags found</p>
+                            </div>
+                          )
                         }
 
                         return (
                           <>
-                            {availableTags.map((tag) => (
-                              <ComboboxItem key={tag.id} value={tag.id} className="text-sm">
-                                <div className="flex items-center gap-2 w-full col-span-2">
-                                  <Hash className="size-3 text-muted-foreground shrink-0" />
-                                  <span className="truncate">{tag.name}</span>
-                                  <span className="ml-auto text-[10px] text-muted-foreground/70 tabular-nums">{tag.count}</span>
-                                </div>
-                              </ComboboxItem>
-                            ))}
+                            {availableTags.length > 0 && (
+                              <ComboboxGroup>
+                                <ComboboxGroupLabel>Available Tags</ComboboxGroupLabel>
+                                {availableTags.map((tag) => (
+                                  <ComboboxItem key={tag.id} value={tag.id} className="text-sm">
+                                    <Hash className="mr-2 size-3 text-muted-foreground/70" />
+                                    <span className="truncate">{tag.name}</span>
+                                    <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums">
+                                      {tag.count}
+                                    </span>
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxGroup>
+                            )}
+
                             {canCreateNew && (
-                              <ComboboxItem value={tagInput.trim()} className="text-sm">
-                                <div className="flex items-center gap-2 w-full col-span-2 text-primary">
-                                  <Plus className="size-3 shrink-0" />
-                                  <span>Create <span className="font-medium">#{tagInput.trim()}</span></span>
-                                </div>
-                              </ComboboxItem>
+                              <>
+                                {availableTags.length > 0 && <ComboboxSeparator />}
+                                <ComboboxGroup>
+                                  <ComboboxGroupLabel>Create New</ComboboxGroupLabel>
+                                  <ComboboxItem
+                                    value={tagInput.trim()}
+                                    className="text-sm text-primary data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
+                                  >
+                                    <Plus className="mr-2 size-3" />
+                                    <span>
+                                      Create <span className="font-medium">#{tagInput.trim()}</span>
+                                    </span>
+                                  </ComboboxItem>
+                                </ComboboxGroup>
+                              </>
                             )}
                           </>
-                        );
+                        )
                       })()}
                     </ComboboxList>
                   </ComboboxPopup>
@@ -343,9 +376,7 @@ export function SnippetDetail() {
 
           {/* Code Editor */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              Code
-            </label>
+            <label className="text-sm font-medium text-muted-foreground">Code</label>
             <CodeEditor
               value={content}
               language={language}
@@ -356,9 +387,7 @@ export function SnippetDetail() {
 
           {/* Notes */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              Notes
-            </label>
+            <label className="text-sm font-medium text-muted-foreground">Notes</label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -440,7 +469,10 @@ export function SnippetDetail() {
 
               <div className="space-y-3 max-h-72 overflow-auto">
                 {aiRuns.map((run) => (
-                  <article key={run.id} className="rounded-xl border border-muted-foreground/20 bg-background/60 p-3 shadow-xs">
+                  <article
+                    key={run.id}
+                    className="rounded-xl border border-muted-foreground/20 bg-background/60 p-3 shadow-xs"
+                  >
                     <div className="mb-2 flex items-center gap-2">
                       <Badge variant="secondary" className="uppercase tracking-wide text-[10px]">
                         {ACTION_LABELS[run.type]}
@@ -465,5 +497,5 @@ export function SnippetDetail() {
         </div>
       </ScrollArea>
     </div>
-  );
+  )
 }
