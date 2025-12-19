@@ -128,6 +128,7 @@ export function SnippetList() {
   const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
   const deleteMultipleSnippets = useSnippetActions((actions) => actions.deleteMultipleSnippets)
   const toggleFavoriteMultiple = useSnippetActions((actions) => actions.toggleFavoriteMultiple)
+  const [isCreating, setIsCreating] = React.useState(false)
 
   // Multi-select hook
   const {
@@ -153,6 +154,15 @@ export function SnippetList() {
     : showFavoritesOnly
       ? 'Favorites'
       : 'All Snippets'
+
+  const handleCreateSnippet = React.useCallback(async () => {
+    setIsCreating(true)
+    try {
+      await createSnippet()
+    } finally {
+      setIsCreating(false)
+    }
+  }, [createSnippet])
 
   // Get the effective selection for context menu actions
   const getEffectiveSelection = React.useCallback((): string[] => {
@@ -295,10 +305,10 @@ export function SnippetList() {
           variant="ghost"
           size="icon"
           className="size-7 rounded-lg"
-          onClick={() => createSnippet()}
-          disabled={isSaving}
+          onClick={handleCreateSnippet}
+          disabled={isCreating}
         >
-          {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
           <span className="sr-only">New Snippet</span>
         </Button>
       </div>
@@ -338,7 +348,7 @@ export function SnippetList() {
               </EmptyHeader>
               {!isSearchActive && (
                 <EmptyContent>
-                  <Button onClick={() => createSnippet()} size="sm">
+                  <Button onClick={handleCreateSnippet} size="sm" disabled={isCreating}>
                     <Plus className="size-4 mr-1" />
                     Create Snippet
                   </Button>

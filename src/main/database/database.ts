@@ -1,27 +1,27 @@
-// Database connection and initialization for Code Snippets
-import { app } from 'electron';
-import Database from 'better-sqlite3';
-import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
-import { MIGRATIONS } from './migrations';
+// Database connection and initialization for Fragment
+import { app } from 'electron'
+import Database from 'better-sqlite3'
+import { join } from 'path'
+import { existsSync, mkdirSync } from 'fs'
+import { MIGRATIONS } from './migrations'
 
-let db: Database.Database | null = null;
+let db: Database.Database | null = null
 
 /**
  * Get the database file path based on OS
- * - macOS: ~/Library/Application Support/code-snippets/
- * - Windows: %APPDATA%/code-snippets/
- * - Linux: ~/.config/code-snippets/
+ * - macOS: ~/Library/Application Support/fragment/
+ * - Windows: %APPDATA%/fragment/
+ * - Linux: ~/.config/fragment/
  */
 function getDatabasePath(): string {
-  const userDataPath = app.getPath('userData');
+  const userDataPath = app.getPath('userData')
 
   // Ensure directory exists
   if (!existsSync(userDataPath)) {
-    mkdirSync(userDataPath, { recursive: true });
+    mkdirSync(userDataPath, { recursive: true })
   }
 
-  return join(userDataPath, 'code-snippets.db');
+  return join(userDataPath, 'fragment.db')
 }
 
 /**
@@ -29,11 +29,13 @@ function getDatabasePath(): string {
  */
 function getCurrentVersion(database: Database.Database): number {
   try {
-    const result = database.prepare('SELECT MAX(version) as version FROM schema_version').get() as { version: number | null };
-    return result?.version ?? 0;
+    const result = database.prepare('SELECT MAX(version) as version FROM schema_version').get() as {
+      version: number | null
+    }
+    return result?.version ?? 0
   } catch {
     // Table doesn't exist yet
-    return 0;
+    return 0
   }
 }
 
@@ -41,19 +43,21 @@ function getCurrentVersion(database: Database.Database): number {
  * Run database migrations
  */
 function runMigrations(database: Database.Database): void {
-  const currentVersion = getCurrentVersion(database);
+  const currentVersion = getCurrentVersion(database)
 
   for (const migration of MIGRATIONS) {
     if (migration.version > currentVersion) {
-      console.log(`Running migration version ${migration.version}...`);
+      console.log(`Running migration version ${migration.version}...`)
 
       // Run migration in a transaction
-      database.exec(migration.up);
+      database.exec(migration.up)
 
       // Record the migration
-      database.prepare('INSERT OR REPLACE INTO schema_version (version) VALUES (?)').run(migration.version);
+      database
+        .prepare('INSERT OR REPLACE INTO schema_version (version) VALUES (?)')
+        .run(migration.version)
 
-      console.log(`Migration version ${migration.version} complete.`);
+      console.log(`Migration version ${migration.version} complete.`)
     }
   }
 }
@@ -64,27 +68,27 @@ function runMigrations(database: Database.Database): void {
  */
 export function initDatabase(): Database.Database {
   if (db) {
-    return db;
+    return db
   }
 
-  const dbPath = getDatabasePath();
-  console.log(`Initializing database at: ${dbPath}`);
+  const dbPath = getDatabasePath()
+  console.log(`Initializing database at: ${dbPath}`)
 
   // Create database connection with WAL mode for better concurrent access
-  db = new Database(dbPath);
+  db = new Database(dbPath)
 
   // Enable foreign keys
-  db.pragma('foreign_keys = ON');
+  db.pragma('foreign_keys = ON')
 
   // Use WAL mode for better performance
-  db.pragma('journal_mode = WAL');
+  db.pragma('journal_mode = WAL')
 
   // Run migrations
-  runMigrations(db);
+  runMigrations(db)
 
-  console.log('Database initialized successfully.');
+  console.log('Database initialized successfully.')
 
-  return db;
+  return db
 }
 
 /**
@@ -93,9 +97,9 @@ export function initDatabase(): Database.Database {
  */
 export function getDatabase(): Database.Database {
   if (!db) {
-    throw new Error('Database not initialized. Call initDatabase() first.');
+    throw new Error('Database not initialized. Call initDatabase() first.')
   }
-  return db;
+  return db
 }
 
 /**
@@ -103,9 +107,9 @@ export function getDatabase(): Database.Database {
  */
 export function closeDatabase(): void {
   if (db) {
-    db.close();
-    db = null;
-    console.log('Database connection closed.');
+    db.close()
+    db = null
+    console.log('Database connection closed.')
   }
 }
 
@@ -113,5 +117,5 @@ export function closeDatabase(): void {
  * Get the path to the database file
  */
 export function getDatabaseFilePath(): string {
-  return getDatabasePath();
+  return getDatabasePath()
 }

@@ -16,7 +16,7 @@ import {
   SidebarFooter
 } from '@/components/ui/sidebar'
 import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react'
-import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useSnippetActions, useSnippetState } from '@/context/SnippetContext'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { SettingsSheet } from '@/components/SettingsSheet'
 import { cn } from '@/lib/utils'
@@ -40,17 +40,14 @@ export function SnippetSidebar() {
   const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
   const searchQuery = useSnippetState((state) => state.searchQuery)
   const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
-  const filteredSnippets = useFilteredSnippets()
   const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
   const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery)
   const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly)
-  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
   const createTag = useSnippetActions((actions) => actions.createTag)
   const updateTag = useSnippetActions((actions) => actions.updateTag)
   const deleteTag = useSnippetActions((actions) => actions.deleteTag)
   const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
   const fetchTrashItems = useSnippetActions((actions) => actions.fetchTrashItems)
-  const trashItems = useSnippetState((state) => state.trashItems)
 
   // State for adding new tag
   const [newTagName, setNewTagName] = React.useState('')
@@ -188,19 +185,8 @@ export function SnippetSidebar() {
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <SidebarTrigger className="-ml-1" />
             <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
-              Snippets
+              Fragment
             </span>
-          </div>
-          <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-lg"
-              onClick={() => createSnippet()}
-            >
-              <Plus className="size-4" />
-              <span className="sr-only">New Snippet</span>
-            </Button>
           </div>
         </div>
         <div className="relative group-data-[collapsible=icon]:hidden">
@@ -236,8 +222,11 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     All Snippets
                   </span>
-                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
-                    {filteredSnippets.length}
+                  <SidebarMenuBadge
+                    data-testid="trash-count"
+                    className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
+                  >
+                    {snippets.length}
                   </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -261,13 +250,16 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     Favorites
                   </span>
-                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                  <SidebarMenuBadge
+                    data-testid="trash-count"
+                    className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
+                  >
                     {favoriteCount}
                   </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-                   <SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   data-testid="filter-recently-deleted"
                   tooltip="Recently Deleted"
@@ -278,16 +270,11 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     Recently Deleted
                   </span>
-                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
-                    {trashItems.length}
-                  </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-
 
         {/* Tags */}
         <SidebarGroup>
@@ -360,7 +347,10 @@ export function SnippetSidebar() {
                     <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                       {tag.name}
                     </span>
-                    <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                    <SidebarMenuBadge
+                      data-testid="trash-count"
+                      className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
+                    >
                       {tag.count}
                     </SidebarMenuBadge>
                   </SidebarMenuButton>

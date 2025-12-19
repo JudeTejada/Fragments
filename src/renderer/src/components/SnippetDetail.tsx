@@ -71,6 +71,7 @@ export function SnippetDetail() {
   const [language, setLanguage] = React.useState('plaintext')
   const [tagInput, setTagInput] = React.useState('')
   const [showSaved, setShowSaved] = React.useState(false)
+  const skipAutoSaveRef = React.useRef(false)
 
   const {
     aiRuns,
@@ -84,6 +85,7 @@ export function SnippetDetail() {
   // Sync local state when selected snippet changes
   React.useEffect(() => {
     if (selectedSnippet) {
+      skipAutoSaveRef.current = true
       setTitle(selectedSnippet.title)
       setContent(selectedSnippet.content)
       setNotes(selectedSnippet.notes ?? '')
@@ -99,6 +101,13 @@ export function SnippetDetail() {
   // Auto-save effect
   React.useEffect(() => {
     if (!selectedSnippet) return
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false
+      return
+    }
+    const isDebounceStale =
+      debouncedTitle !== title || debouncedContent !== content || debouncedNotes !== notes
+    if (isDebounceStale) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
@@ -119,7 +128,16 @@ export function SnippetDetail() {
       return () => clearTimeout(timer)
     }
     return undefined
-  }, [debouncedTitle, debouncedContent, debouncedNotes, selectedSnippet, updateSnippet])
+  }, [
+    debouncedTitle,
+    debouncedContent,
+    debouncedNotes,
+    selectedSnippet,
+    title,
+    content,
+    notes,
+    updateSnippet
+  ])
 
   // Handle language change (immediate save)
   const handleLanguageChange = (value: string | null) => {

@@ -160,8 +160,6 @@ export function registerIPCHandlers(): void {
       if (!deleted) {
         return { success: false, error: 'Snippet not found' }
       }
-      // Clean up orphaned tags
-      TagRepository.deleteOrphaned()
       return { success: true, data: true }
     } catch (error) {
       console.error('Error permanently deleting snippet:', error)
@@ -189,8 +187,6 @@ export function registerIPCHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.SNIPPETS_EMPTY_TRASH, () => {
     try {
       const deletedCount = SnippetRepository.emptyTrash()
-      // Clean up orphaned tags
-      TagRepository.deleteOrphaned()
       return { success: true, data: deletedCount }
     } catch (error) {
       console.error('Error emptying trash:', error)
@@ -351,7 +347,7 @@ export function registerIPCHandlers(): void {
     try {
       const dbPath = getDatabaseFilePath()
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const defaultFileName = `code-snippets-backup-${timestamp}.db`
+      const defaultFileName = `fragment-backup-${timestamp}.db`
 
       // Show save dialog
       const result = await dialog.showSaveDialog({
