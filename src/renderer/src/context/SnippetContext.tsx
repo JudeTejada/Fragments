@@ -52,9 +52,15 @@ type SnippetActions = {
 type SnippetStore = SnippetState & SnippetActions
 
 const useSnippetStore = create<SnippetStore>((set, get) => {
+  const snippetApi = window.api.snippets
+  const tagApi = window.api.tags
+
+  const getErrorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : String(err)
+
   const fetchSnippets = async () => {
     try {
-      const result = await window.api.snippets.list()
+      const result = await snippetApi.list()
       if (result.success && result.data) {
         set({ snippets: result.data })
         const { selectedSnippetId } = get()
@@ -65,20 +71,20 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         set({ error: result.error || 'Failed to fetch snippets' })
       }
     } catch (err) {
-      set({ error: String(err) })
+      set({ error: getErrorMessage(err) })
     }
   }
 
   const fetchTags = async () => {
     try {
-      const result = await window.api.tags.list()
+      const result = await tagApi.list()
       if (result.success && result.data) {
         set({ tags: result.data })
       } else {
         set({ error: result.error || 'Failed to fetch tags' })
       }
     } catch (err) {
-      set({ error: String(err) })
+      set({ error: getErrorMessage(err) })
     }
   }
 
@@ -106,7 +112,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
       })),
     refreshData: async () => {
       set({ isLoading: true, error: null })
-      await Promise.all([fetchSnippets(), fetchTags()])
+      await Promise.all([fetchSnippets(), fetchTags(), get().fetchTrashItems()])
       set({ isLoading: false })
     },
     createSnippet: async (payloadOverride?: Partial<CreateSnippetPayload>) => {
@@ -122,18 +128,19 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           tags: payloadOverride?.tags ?? []
         }
 
-        const result = await window.api.snippets.create(payload)
+        const result = await snippetApi.create(payload)
 
         if (result.success && result.data) {
-          set((state) => ({ snippets: [result.data!, ...state.snippets] }))
-          set({ selectedSnippetId: result.data.id })
+          const newSnippet = result.data as Snippet
+          set((state) => ({ snippets: [newSnippet, ...state.snippets] }))
+          set({ selectedSnippetId: newSnippet.id })
           fetchTags()
-          return result.data
+          return newSnippet
         }
         set({ error: result.error || 'Failed to create snippet' })
         return null
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
         return null
       } finally {
         set({ isSaving: false })
@@ -152,12 +159,13 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           tags: update.tags?.map((tag) => tag.name)
         }
 
-        const result = await window.api.snippets.update(payload)
+        const result = await snippetApi.update(payload)
 
         if (result.success && result.data) {
+          const updatedSnippet = result.data as Snippet
           set((state) => ({
             snippets: state.snippets.map((snippet) =>
-              snippet.id === update.id ? result.data! : snippet
+              snippet.id === update.id ? updatedSnippet : snippet
             )
           }))
           if (update.tags !== undefined) {
@@ -167,7 +175,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to update snippet' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -191,12 +199,12 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         for (const id of ids) {
           const target = snippets.find((item) => item.id === id)
           if (target && target.isFavorite !== shouldAddFavorite) {
-            await window.api.snippets.update({ id, isFavorite: shouldAddFavorite })
+            await snippetApi.update({ id, isFavorite: shouldAddFavorite })
           }
         }
         await fetchSnippets()
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -205,7 +213,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
       set({ isSaving: true })
       try {
         const { selectedSnippetId, snippets } = get()
-        const result = await (window.api.snippets as any).softDelete(id)
+        const result = await snippetApi.softDelete(id)
 
         if (result.success) {
           set((state) => ({ snippets: state.snippets.filter((snippet) => snippet.id !== id) }))
@@ -222,7 +230,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to delete snippet' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -232,7 +240,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
       try {
         const { selectedSnippetId, snippets } = get()
         for (const id of ids) {
-          await (window.api.snippets as any).softDelete(id)
+          await snippetApi.softDelete(id)
         }
         set((state) => ({
           snippets: state.snippets.filter((snippet) => !ids.includes(snippet.id))
@@ -246,7 +254,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         // Refresh trash items to show the deleted items
         await get().fetchTrashItems()
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -254,7 +262,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     createTag: async (name: string): Promise<Tag | null> => {
       set({ isSaving: true })
       try {
-        const result = await window.api.tags.create(name)
+        const result = await tagApi.create(name)
         if (result.success && result.data) {
           await fetchTags()
           return result.data
@@ -262,7 +270,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         set({ error: result.error || 'Failed to create tag' })
         return null
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
         return null
       } finally {
         set({ isSaving: false })
@@ -271,7 +279,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     updateTag: async (id: string, name: string): Promise<Tag | null> => {
       set({ isSaving: true })
       try {
-        const result = await window.api.tags.update(id, name)
+        const result = await tagApi.update(id, name)
         if (result.success && result.data) {
           await fetchTags()
           await fetchSnippets()
@@ -280,7 +288,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         set({ error: result.error || 'Failed to update tag' })
         return null
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
         return null
       } finally {
         set({ isSaving: false })
@@ -289,7 +297,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     deleteTag: async (id: string): Promise<boolean> => {
       set({ isSaving: true })
       try {
-        const result = await window.api.tags.delete(id)
+        const result = await tagApi.delete(id)
         if (result.success) {
           set((state) => ({
             selectedTagIds: state.selectedTagIds.filter((tagId) => tagId !== id)
@@ -301,7 +309,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
         set({ error: result.error || 'Failed to delete tag' })
         return false
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
         return false
       } finally {
         set({ isSaving: false })
@@ -312,7 +320,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     moveToTrash: async (id: string) => {
       set({ isSaving: true })
       try {
-        const result = await (window.api.snippets as any).softDelete(id)
+        const result = await snippetApi.softDelete(id)
         if (result.success) {
           // Remove from main snippets list
           set((state) => ({ snippets: state.snippets.filter((snippet) => snippet.id !== id) }))
@@ -322,7 +330,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to move snippet to trash' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -331,7 +339,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     restoreFromTrash: async (id: string) => {
       set({ isSaving: true })
       try {
-        const result = await (window.api.snippets as any).restore(id)
+        const result = await snippetApi.restore(id)
         if (result.success) {
           // Refresh both snippets and trash
           await Promise.all([fetchSnippets(), get().fetchTrashItems()])
@@ -339,7 +347,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to restore snippet from trash' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -348,7 +356,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     permanentDelete: async (id: string) => {
       set({ isSaving: true })
       try {
-        const result = await (window.api.snippets as any).permanentDelete(id)
+        const result = await snippetApi.permanentDelete(id)
         if (result.success) {
           // Remove from trash items
           set((state) => ({ trashItems: state.trashItems.filter((item) => item.id !== id) }))
@@ -358,7 +366,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to permanently delete snippet' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -367,7 +375,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
     emptyTrash: async () => {
       set({ isSaving: true })
       try {
-        const result = await (window.api.snippets as any).emptyTrash()
+        const result = await snippetApi.emptyTrash()
         if (result.success) {
           set({ trashItems: [] })
           // Clean up orphaned tags
@@ -376,7 +384,7 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
           set({ error: result.error || 'Failed to empty trash' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }
@@ -384,14 +392,14 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
 
     fetchTrashItems: async () => {
       try {
-        const result = await (window.api.snippets as any).getTrash()
+        const result = await snippetApi.getTrash()
         if (result.success && result.data) {
           set({ trashItems: result.data })
         } else {
           set({ error: result.error || 'Failed to fetch trash items' })
         }
       } catch (err) {
-        set({ error: String(err) })
+        set({ error: getErrorMessage(err) })
       }
     },
 

@@ -35,7 +35,6 @@ function formatRelativeTime(dateString: string): string {
 }
 
 interface SnippetRowProps {
-  id: string
   title: string
   language: string
   tags: { id: string; name: string }[]
@@ -156,13 +155,14 @@ export function SnippetList() {
       : 'All Snippets'
 
   const handleCreateSnippet = React.useCallback(async () => {
+    if (isCreating || isSaving) return
     setIsCreating(true)
     try {
       await createSnippet()
     } finally {
       setIsCreating(false)
     }
-  }, [createSnippet])
+  }, [createSnippet, isCreating, isSaving])
 
   // Get the effective selection for context menu actions
   const getEffectiveSelection = React.useCallback((): string[] => {
@@ -306,7 +306,7 @@ export function SnippetList() {
           size="icon"
           className="size-7 rounded-lg"
           onClick={handleCreateSnippet}
-          disabled={isCreating}
+          disabled={isCreating || isSaving}
         >
           {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
           <span className="sr-only">New Snippet</span>
@@ -348,7 +348,11 @@ export function SnippetList() {
               </EmptyHeader>
               {!isSearchActive && (
                 <EmptyContent>
-                  <Button onClick={handleCreateSnippet} size="sm" disabled={isCreating}>
+                  <Button
+                    onClick={handleCreateSnippet}
+                    size="sm"
+                    disabled={isCreating || isSaving}
+                  >
                     <Plus className="size-4 mr-1" />
                     Create Snippet
                   </Button>
@@ -359,7 +363,6 @@ export function SnippetList() {
             filteredSnippets.map((snippet, index) => (
               <SnippetRow
                 key={snippet.id}
-                id={snippet.id}
                 title={snippet.title}
                 language={snippet.language}
                 tags={snippet.tags}
