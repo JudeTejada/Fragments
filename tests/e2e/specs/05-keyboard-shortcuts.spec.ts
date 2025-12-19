@@ -6,9 +6,9 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(page.getByPlaceholder('Snippet title...')).toBeVisible()
   })
 
-  test('focuses search with Meta+F', async ({ page }) => {
-    await page.keyboard.press('Meta+F')
-    await expect(page.getByTestId('sidebar-search')).toBeFocused()
+  test('opens quick switcher with Meta+K', async ({ page }) => {
+    await page.keyboard.press('Meta+K')
+    await expect(page.getByPlaceholder('Search snippets...')).toBeVisible()
   })
 
   test('deletes selected snippet with Delete key', async ({ page, testUtils }) => {

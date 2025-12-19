@@ -8,6 +8,7 @@ import { TrashView } from '@/components/TrashView'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcuts'
 import { QuickCaptureModal } from '@/components/QuickCaptureModal'
+import { QuickSwitcher } from '@/components/QuickSwitcher'
 import { ToastProvider, toastManager } from '@/components/ui/toast'
 
 // Inner component that has access to context
@@ -23,6 +24,7 @@ function AppContent() {
     open: false,
     content: ''
   })
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = React.useState(false)
 
   const handleBackToSnippets = () => {
     setShowTrash(false)
@@ -34,18 +36,11 @@ function AppContent() {
     enableOnFormTags: true // Allow in form fields
   })
 
-  useKeyboardShortcut(
-    'meta+f, ctrl+f',
-    () => {
-      // Find and focus the search input
-      const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement
-      searchInput?.focus()
-    },
-    {
-      description: 'Focus search input',
-      enableOnFormTags: true // Allow in form fields
-    }
-  )
+  // Quick Switcher keyboard shortcut (Cmd+K / Ctrl+K)
+  useKeyboardShortcut('meta+k, ctrl+k', () => setQuickSwitcherOpen(true), {
+    description: 'Open quick switcher',
+    enableOnFormTags: true
+  })
 
   React.useEffect(() => {
     if (!window.api?.quickCapture) return
@@ -101,6 +96,8 @@ function AppContent() {
           </SidebarInset>
         </div>
       </SidebarProvider>
+
+      <QuickSwitcher open={quickSwitcherOpen} onOpenChange={setQuickSwitcherOpen} />
 
       <QuickCaptureModal
         open={quickCapture.open}

@@ -27,13 +27,6 @@ test.describe('Sidebar Navigation', () => {
     await expect(page.locator('[data-title="Python Snippet"]')).toHaveCount(0)
   })
 
-  test('searches snippets', async ({ page }) => {
-    await page.getByTestId('sidebar-search').fill('Python')
-    await expect(page.getByRole('heading', { name: 'Search Results' })).toBeVisible()
-    await expect(page.locator('[data-title="Python Snippet"]')).toBeVisible()
-    await expect(page.locator('[data-title="JavaScript Snippet"]')).toHaveCount(0)
-  })
-
   test('clears filters via All Snippets', async ({ page }) => {
     await page.getByTestId('filter-favorites').click()
     await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible()

@@ -6,7 +6,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
@@ -15,7 +14,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from '@/components/ui/sidebar'
-import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react'
+import { Code2, Hash, Pencil, Plus, Star, Trash2 } from 'lucide-react'
 import { useSnippetActions, useSnippetState } from '@/context/SnippetContext'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { SettingsSheet } from '@/components/SettingsSheet'
@@ -38,12 +37,10 @@ export function SnippetSidebar() {
   const snippets = useSnippetState((state) => state.snippets)
   const tags = useSnippetState((state) => state.tags)
   const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
-  const searchQuery = useSnippetState((state) => state.searchQuery)
   const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
   const trashItems = useSnippetState((state) => state.trashItems)
   const showTrash = useSnippetState((state) => state.showTrash)
   const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
-  const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery)
   const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly)
   const createTag = useSnippetActions((actions) => actions.createTag)
   const updateTag = useSnippetActions((actions) => actions.updateTag)
@@ -79,7 +76,6 @@ export function SnippetSidebar() {
 
   const clearFilters = () => {
     setSelectedTagIds([])
-    setSearchQuery('')
     setShowFavoritesOnly(false)
     // Exit trash view when clearing filters
     setShowTrash(false)
@@ -197,17 +193,6 @@ export function SnippetSidebar() {
               Fragment
             </span>
           </div>
-        </div>
-        <div className="relative group-data-[collapsible=icon]:hidden">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <SidebarInput
-            data-search-input
-            data-testid="sidebar-search"
-            placeholder="Search snippets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
         </div>
       </SidebarHeader>
 

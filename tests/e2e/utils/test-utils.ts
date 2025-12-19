@@ -17,7 +17,7 @@ export class TestUtils {
   async waitForAppLoad() {
     await this.page.waitForLoadState('domcontentloaded')
     await this.page.getByText('Snippets', { exact: false }).first().waitFor()
-    await this.page.getByTestId('sidebar-search').waitFor({ state: 'visible' })
+    await this.page.getByTestId('filter-all').waitFor({ state: 'visible' })
   }
 
   async clickNewSnippet() {
@@ -69,9 +69,15 @@ export class TestUtils {
     await this.page.waitForTimeout(150)
   }
 
-  async searchSnippet(query: string) {
-    await this.page.getByTestId('sidebar-search').fill(query)
-    await this.page.waitForTimeout(300)
+  async openQuickSwitcher() {
+    await this.page.keyboard.press('Meta+K')
+    await this.page.getByPlaceholder('Search snippets...').waitFor({ state: 'visible' })
+  }
+
+  async searchViaQuickSwitcher(query: string) {
+    await this.openQuickSwitcher()
+    await this.page.getByPlaceholder('Search snippets...').fill(query)
+    await this.page.waitForTimeout(150)
   }
 
   async openSettings() {
