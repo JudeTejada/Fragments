@@ -75,7 +75,7 @@ function TrashItem({ snippet, onRestore, onPermanentDelete }: TrashItemProps) {
           size="sm"
           onClick={() => onRestore(snippet.id)}
           data-testid="restore-button"
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
+          className="transition-opacity"
         >
           <RotateCcw className="size-3 mr-1" />
           Restore
@@ -87,7 +87,7 @@ function TrashItem({ snippet, onRestore, onPermanentDelete }: TrashItemProps) {
               variant="destructive"
               size="sm"
               data-testid="delete-permanently-button"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="transition-opacity"
             >
               <AlertTriangle className="size-3 mr-1" />
               Delete Permanently
