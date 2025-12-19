@@ -1,5 +1,15 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { Snippet, Tag, Settings, CreateSnippetPayload, UpdateSnippetPayload, SearchParams, AiRun, AiActionType } from '../shared/types'
+import type {
+  Snippet,
+  Tag,
+  Settings,
+  CreateSnippetPayload,
+  UpdateSnippetPayload,
+  SearchParams,
+  AiRun,
+  AiActionType,
+  TrashedSnippet
+} from '../shared/types'
 
 // Response type from IPC handlers
 interface IPCResponse<T> {
@@ -17,6 +27,12 @@ interface CodeSnippetsAPI {
     update: (data: UpdateSnippetPayload) => Promise<IPCResponse<Snippet>>
     delete: (id: string) => Promise<IPCResponse<boolean>>
     search: (params: SearchParams) => Promise<IPCResponse<Snippet[]>>
+    // Trash operations
+    softDelete: (id: string) => Promise<IPCResponse<boolean>>
+    restore: (id: string) => Promise<IPCResponse<boolean>>
+    permanentDelete: (id: string) => Promise<IPCResponse<boolean>>
+    getTrash: (retentionDays?: number) => Promise<IPCResponse<TrashedSnippet[]>>
+    emptyTrash: () => Promise<IPCResponse<number>>
   }
   tags: {
     list: () => Promise<IPCResponse<Tag[]>>

@@ -1,7 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IPC_CHANNELS } from '../shared/channels'
-import type { CreateSnippetPayload, UpdateSnippetPayload, SearchParams, Settings, Snippet, Tag, AiRun, AiActionType } from '../shared/types'
+import type {
+  CreateSnippetPayload,
+  UpdateSnippetPayload,
+  SearchParams,
+  Settings,
+  Snippet,
+  Tag,
+  AiRun,
+  AiActionType,
+  TrashedSnippet
+} from '../shared/types'
 
 // Response type from IPC handlers
 interface IPCResponse<T> {
@@ -30,11 +40,26 @@ const api = {
 
     search: (params: SearchParams): Promise<IPCResponse<Snippet[]>> =>
       ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_SEARCH, params),
+
+    // Trash operations
+    softDelete: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_SOFT_DELETE, { id }),
+
+    restore: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_RESTORE, { id }),
+
+    permanentDelete: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_PERMANENT_DELETE, { id }),
+
+    getTrash: (retentionDays?: number): Promise<IPCResponse<TrashedSnippet[]>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_GET_TRASH, { retentionDays }),
+
+    emptyTrash: (): Promise<IPCResponse<number>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_EMPTY_TRASH)
   },
 
   tags: {
-    list: (): Promise<IPCResponse<Tag[]>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
+    list: (): Promise<IPCResponse<Tag[]>> => ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
 
     create: (name: string): Promise<IPCResponse<Tag>> =>
       ipcRenderer.invoke(IPC_CHANNELS.TAGS_CREATE, { name }),
@@ -43,43 +68,41 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TAGS_UPDATE, { id, name }),
 
     delete: (id: string): Promise<IPCResponse<boolean>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { id }),
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { id })
   },
 
   settings: {
-    get: (): Promise<IPCResponse<Settings>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
+    get: (): Promise<IPCResponse<Settings>> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
 
     update: (settings: Partial<Settings>): Promise<IPCResponse<Settings>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, settings),
+      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, settings)
   },
 
   quickCapture: {
     onNewSnippet: (cb: (payload: { content: string }) => void) => {
-      const handler = (_event: unknown, payload: { content: string }) => cb(payload);
-      ipcRenderer.on('quick-capture:new-snippet', handler);
-      return () => ipcRenderer.removeListener('quick-capture:new-snippet', handler);
+      const handler = (_event: unknown, payload: { content: string }) => cb(payload)
+      ipcRenderer.on('quick-capture:new-snippet', handler)
+      return () => ipcRenderer.removeListener('quick-capture:new-snippet', handler)
     },
     onError: (cb: (payload: { message: string }) => void) => {
-      const handler = (_event: unknown, payload: { message: string }) => cb(payload);
-      ipcRenderer.on('quick-capture:error', handler);
-      return () => ipcRenderer.removeListener('quick-capture:error', handler);
+      const handler = (_event: unknown, payload: { message: string }) => cb(payload)
+      ipcRenderer.on('quick-capture:error', handler)
+      return () => ipcRenderer.removeListener('quick-capture:error', handler)
     },
     onShortcutError: (cb: (payload: { shortcut: string; message: string }) => void) => {
-      const handler = (_event: unknown, payload: { shortcut: string; message: string }) => cb(payload);
-      ipcRenderer.on('quick-capture:shortcut-error', handler);
-      return () => ipcRenderer.removeListener('quick-capture:shortcut-error', handler);
-    },
+      const handler = (_event: unknown, payload: { shortcut: string; message: string }) =>
+        cb(payload)
+      ipcRenderer.on('quick-capture:shortcut-error', handler)
+      return () => ipcRenderer.removeListener('quick-capture:shortcut-error', handler)
+    }
   },
 
   backup: {
-    export: (): Promise<IPCResponse<string>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
+    export: (): Promise<IPCResponse<string>> => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT)
   },
 
   system: {
-    getDbPath: (): Promise<IPCResponse<string>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.DB_PATH),
+    getDbPath: (): Promise<IPCResponse<string>> => ipcRenderer.invoke(IPC_CHANNELS.DB_PATH)
   },
 
   ai: {
@@ -87,9 +110,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.AI_RUN, data),
     listForSnippet: (snippetId: string): Promise<IPCResponse<AiRun[]>> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_LIST_FOR_SNIPPET, { snippetId }),
-    testConnection: (): Promise<IPCResponse<{ ok: boolean; message?: string; models?: string[] }>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.AI_TEST_CONNECTION),
-  },
+    testConnection: (): Promise<
+      IPCResponse<{ ok: boolean; message?: string; models?: string[] }>
+    > => ipcRenderer.invoke(IPC_CHANNELS.AI_TEST_CONNECTION)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

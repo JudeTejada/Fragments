@@ -259,7 +259,7 @@ export function SnippetDetail() {
                   onClick={handleDelete}
                 >
                   <Trash2 className="size-4" />
-                  <span className="sr-only">Delete</span>
+                  <span className="sr-only">Move to Trash</span>
                 </Button>
               </div>
             </div>

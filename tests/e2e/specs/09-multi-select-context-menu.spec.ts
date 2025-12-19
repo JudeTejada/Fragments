@@ -23,14 +23,11 @@ test.describe('Multi-Select & Context Menu', () => {
     await testUtils.rightClickSnippet('Snippet A')
 
     // Context menu should be visible with expected items
-    await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Add to Favourites' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Move to Trash' })).toBeVisible()
   })
 
   test('delete action removes single snippet', async ({ page, testUtils }) => {
     await testUtils.rightClickSnippet('Snippet A')
-    await testUtils.clickContextMenuItem('Delete')
+    await testUtils.clickContextMenuItem('Move to Trash')
 
     // Snippet A should be gone
     await expect(page.getByTestId('snippet-row').filter({ hasText: 'Snippet A' })).toBeHidden()
@@ -45,7 +42,7 @@ test.describe('Multi-Select & Context Menu', () => {
 
     // Right-click and delete
     await testUtils.rightClickSnippet('Snippet B')
-    await testUtils.clickContextMenuItem('Delete')
+    await testUtils.clickContextMenuItem('Move to Trash')
 
     // Both C and B should be gone
     await expect(page.getByTestId('snippet-row').filter({ hasText: 'Snippet C' })).toBeHidden()

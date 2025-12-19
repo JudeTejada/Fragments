@@ -52,7 +52,7 @@ tests/e2e/
 Install dependencies:
 
 ```bash
-npm install
+bun install
 ```
 
 Install Playwright browsers:
@@ -65,25 +65,25 @@ npx playwright install chromium
 
 ```bash
 # Run all tests
-npm test:e2e
+bun test:e2e
 
 # Run tests with UI mode (interactive)
-npm test:e2e:ui
+bun test:e2e:ui
 
 # Run tests in headed mode (see browser)
-npm test:e2e:headed
+bun test:e2e:headed
 
 # Run specific test file
-npm test:e2e -- tests/e2e/specs/01-app-flow.spec.ts
+bun test:e2e -- tests/e2e/specs/01-app-flow.spec.ts
 
 # Run tests with grep pattern
-npm test:e2e -g "should create a new snippet"
+bun test:e2e -g "should create a new snippet"
 
 # Run tests in debug mode
-npm test:e2e --debug
+bun test:e2e --debug
 
 # Generate test report
-npm test:e2e && npx playwright show-report
+bun test:e2e && npx playwright show-report
 ```
 
 ### CI/CD
@@ -506,7 +506,7 @@ test.describe.configure({ retries: 2 })
 Use the UI mode for debugging:
 
 ```bash
-npm test:e2e:ui
+bun test:e2e:ui
 ```
 
 Add debug points:
@@ -555,7 +555,7 @@ Tests automatically run on CI. To ensure reliable CI runs:
 ```yaml
 # Example GitHub Actions
 - name: Run E2E tests
-  run: npm test:e2e
+  run: bun test:e2e
 
 - name: Upload test results
   uses: actions/upload-artifact@v3

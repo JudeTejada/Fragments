@@ -11,24 +11,24 @@ An Electron application with React and TypeScript
 ### Install
 
 ```bash
-$ npm install
+$ bun install
 ```
 
 ### Development
 
 ```bash
-$ npm dev
+$ bun dev
 ```
 
 ### Build
 
 ```bash
 # For windows
-$ npm build:win
+$ bun build:win
 
 # For macOS
-$ npm build:mac
+$ bun build:mac
 
 # For Linux
-$ npm build:linux
+$ bun build:linux
 ```

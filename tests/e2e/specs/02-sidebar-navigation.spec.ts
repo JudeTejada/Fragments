@@ -13,7 +13,7 @@ test.describe('Sidebar Navigation', () => {
     await page.waitForTimeout(200)
   })
 
-  test('filters favorites', async ({ page }) => {
+  test    ('filters favorites', async ({ page }) => {
     await page.getByTestId('filter-favorites').click()
     await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible()
     await expect(page.locator('[data-title="JavaScript Snippet"]')).toBeVisible()

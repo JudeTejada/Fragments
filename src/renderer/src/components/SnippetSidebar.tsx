@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from 'react'
 import {
   Sidebar,
   SidebarContent,
@@ -13,16 +13,16 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
-  SidebarFooter,
-} from '@/components/ui/sidebar';
-import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
-import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { SettingsSheet } from '@/components/SettingsSheet';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverTrigger, PopoverPopup, PopoverClose } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
-import { ContextMenu, useContextMenu } from '@/components/ui/context-menu';
+  SidebarFooter
+} from '@/components/ui/sidebar'
+import { Code2, Hash, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react'
+import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { SettingsSheet } from '@/components/SettingsSheet'
+import { cn } from '@/lib/utils'
+import { Popover, PopoverTrigger, PopoverPopup, PopoverClose } from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
+import { ContextMenu, useContextMenu } from '@/components/ui/context-menu'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -31,136 +31,155 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogDescription,
-  AlertDialogClose,
-} from '@/components/ui/alert-dialog';
+  AlertDialogClose
+} from '@/components/ui/alert-dialog'
 
 export function SnippetSidebar() {
-  const snippets = useSnippetState((state) => state.snippets);
-  const tags = useSnippetState((state) => state.tags);
-  const selectedTagIds = useSnippetState((state) => state.selectedTagIds);
-  const searchQuery = useSnippetState((state) => state.searchQuery);
-  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly);
-  const filteredSnippets = useFilteredSnippets();
-  const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds);
-  const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery);
-  const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly);
-  const createSnippet = useSnippetActions((actions) => actions.createSnippet);
-  const createTag = useSnippetActions((actions) => actions.createTag);
-  const updateTag = useSnippetActions((actions) => actions.updateTag);
-  const deleteTag = useSnippetActions((actions) => actions.deleteTag);
+  const snippets = useSnippetState((state) => state.snippets)
+  const tags = useSnippetState((state) => state.tags)
+  const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
+  const searchQuery = useSnippetState((state) => state.searchQuery)
+  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
+  const filteredSnippets = useFilteredSnippets()
+  const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
+  const setSearchQuery = useSnippetActions((actions) => actions.setSearchQuery)
+  const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly)
+  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
+  const createTag = useSnippetActions((actions) => actions.createTag)
+  const updateTag = useSnippetActions((actions) => actions.updateTag)
+  const deleteTag = useSnippetActions((actions) => actions.deleteTag)
+  const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
+  const fetchTrashItems = useSnippetActions((actions) => actions.fetchTrashItems)
+  const trashItems = useSnippetState((state) => state.trashItems)
 
   // State for adding new tag
-  const [newTagName, setNewTagName] = React.useState('');
-  const [isAddTagOpen, setIsAddTagOpen] = React.useState(false);
+  const [newTagName, setNewTagName] = React.useState('')
+  const [isAddTagOpen, setIsAddTagOpen] = React.useState(false)
 
   // State for editing tag
-  const [editTagName, setEditTagName] = React.useState('');
-  const [editingTagId, setEditingTagId] = React.useState<string | null>(null);
-  const [isEditPopoverOpen, setIsEditPopoverOpen] = React.useState(false);
+  const [editTagName, setEditTagName] = React.useState('')
+  const [editingTagId, setEditingTagId] = React.useState<string | null>(null)
+  const [isEditPopoverOpen, setIsEditPopoverOpen] = React.useState(false)
 
   // State for delete confirmation
-  const [deletingTagId, setDeletingTagId] = React.useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [deletingTagId, setDeletingTagId] = React.useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
 
   // Context menu for tags
-  const tagContextMenu = useContextMenu();
+  const tagContextMenu = useContextMenu()
 
   const handleTagClick = (tagId: string) => {
     if (selectedTagIds.includes(tagId)) {
-      setSelectedTagIds(selectedTagIds.filter(id => id !== tagId));
+      setSelectedTagIds(selectedTagIds.filter((id) => id !== tagId))
     } else {
-      setSelectedTagIds([...selectedTagIds, tagId]);
+      setSelectedTagIds([...selectedTagIds, tagId])
     }
-  };
+    // Exit trash view when clicking on tags
+    handleNormalViewClick()
+  }
 
   const clearFilters = () => {
-    setSelectedTagIds([]);
-    setSearchQuery('');
-    setShowFavoritesOnly(false);
-  };
+    setSelectedTagIds([])
+    setSearchQuery('')
+    setShowFavoritesOnly(false)
+    // Exit trash view when clearing filters
+    setShowTrash(false)
+  }
+
+  const handleRecentlyDeletedClick = async () => {
+    await fetchTrashItems()
+    setShowTrash(true)
+  }
+
+  const handleNormalViewClick = () => {
+    setShowTrash(false)
+  }
 
   const favoriteCount = React.useMemo(
-    () => snippets.filter(snippet => snippet.isFavorite).length,
+    () => snippets.filter((snippet) => snippet.isFavorite).length,
     [snippets]
-  );
+  )
 
   // Handle create tag
   const handleCreateTag = async () => {
     if (newTagName.trim()) {
-      await createTag(newTagName.trim());
-      setNewTagName('');
-      setIsAddTagOpen(false);
+      await createTag(newTagName.trim())
+      setNewTagName('')
+      setIsAddTagOpen(false)
     }
-  };
+  }
 
   // Handle edit tag
   const handleEditTag = async () => {
     if (editingTagId && editTagName.trim()) {
-      await updateTag(editingTagId, editTagName.trim());
-      setEditingTagId(null);
-      setEditTagName('');
-      setIsEditPopoverOpen(false);
+      await updateTag(editingTagId, editTagName.trim())
+      setEditingTagId(null)
+      setEditTagName('')
+      setIsEditPopoverOpen(false)
     }
-  };
+  }
 
   // Handle delete tag
   const handleDeleteTag = async () => {
     if (deletingTagId) {
-      await deleteTag(deletingTagId);
-      setDeletingTagId(null);
-      setIsDeleteDialogOpen(false);
+      await deleteTag(deletingTagId)
+      setDeletingTagId(null)
+      setIsDeleteDialogOpen(false)
     }
-  };
+  }
 
   // Handle tag right-click
   const handleTagContextMenu = (tagId: string, e: React.MouseEvent) => {
-    tagContextMenu.open(e, tagId);
-  };
+    tagContextMenu.open(e, tagId)
+  }
 
   // Start editing a tag
   const startEditTag = () => {
     if (tagContextMenu.targetId) {
-      const tag = tags.find(t => t.id === tagContextMenu.targetId);
+      const tag = tags.find((t) => t.id === tagContextMenu.targetId)
       if (tag) {
-        setEditingTagId(tag.id);
-        setEditTagName(tag.name);
-        setIsEditPopoverOpen(true);
+        setEditingTagId(tag.id)
+        setEditTagName(tag.name)
+        setIsEditPopoverOpen(true)
       }
     }
-    tagContextMenu.close();
-  };
+    tagContextMenu.close()
+  }
 
   // Start delete confirmation
   const startDeleteTag = () => {
     if (tagContextMenu.targetId) {
-      setDeletingTagId(tagContextMenu.targetId);
-      setIsDeleteDialogOpen(true);
+      setDeletingTagId(tagContextMenu.targetId)
+      setIsDeleteDialogOpen(true)
     }
-    tagContextMenu.close();
-  };
+    tagContextMenu.close()
+  }
 
   // Get tag name for delete dialog
   const deletingTag = React.useMemo(
-    () => tags.find(t => t.id === deletingTagId),
+    () => tags.find((t) => t.id === deletingTagId),
     [tags, deletingTagId]
-  );
+  )
 
   // Context menu items for tags
-  const tagContextMenuItems = React.useMemo(() => [
-    {
-      label: 'Edit',
-      icon: <Pencil className="size-4" />,
-      onClick: startEditTag,
-      testId: 'context-menu-edit-tag',
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="size-4" />,
-      onClick: startDeleteTag,
-      variant: 'destructive' as const,
-      testId: 'context-menu-delete-tag',
-    },
-  ], [tagContextMenu.targetId]);
+  const tagContextMenuItems = React.useMemo(
+    () => [
+      {
+        label: 'Edit',
+        icon: <Pencil className="size-4" />,
+        onClick: startEditTag,
+        testId: 'context-menu-edit-tag'
+      },
+      {
+        label: 'Delete',
+        icon: <Trash2 className="size-4" />,
+        onClick: startDeleteTag,
+        variant: 'destructive' as const,
+        testId: 'context-menu-delete-tag'
+      }
+    ],
+    [tagContextMenu.targetId]
+  )
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -206,7 +225,10 @@ export function SnippetSidebar() {
                 <SidebarMenuButton
                   data-testid="filter-all"
                   isActive={!showFavoritesOnly && selectedTagIds.length === 0}
-                  onClick={clearFilters}
+                  onClick={() => {
+                    clearFilters()
+                    handleNormalViewClick()
+                  }}
                   tooltip="All Snippets"
                   className="transition-all duration-200 ease-out"
                 >
@@ -214,7 +236,7 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     All Snippets
                   </span>
-                  <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
                     {filteredSnippets.length}
                   </SidebarMenuBadge>
                 </SidebarMenuButton>
@@ -223,7 +245,10 @@ export function SnippetSidebar() {
                 <SidebarMenuButton
                   data-testid="filter-favorites"
                   isActive={showFavoritesOnly}
-                  onClick={() => setShowFavoritesOnly(prev => !prev)}
+                  onClick={() => {
+                    setShowFavoritesOnly((prev) => !prev)
+                    handleNormalViewClick()
+                  }}
                   tooltip="Favorites"
                   className="transition-all duration-200 ease-out"
                 >
@@ -236,14 +261,33 @@ export function SnippetSidebar() {
                   <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                     Favorites
                   </span>
-                  <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
                     {favoriteCount}
+                  </SidebarMenuBadge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+                   <SidebarMenuItem>
+                <SidebarMenuButton
+                  data-testid="filter-recently-deleted"
+                  tooltip="Recently Deleted"
+                  className="transition-all duration-200 ease-out"
+                  onClick={handleRecentlyDeletedClick}
+                >
+                  <Trash2 className="size-4 shrink-0 transition-transform duration-200" />
+                  <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+                    Recently Deleted
+                  </span>
+                  <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                    {trashItems.length}
                   </SidebarMenuBadge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+
 
         {/* Tags */}
         <SidebarGroup>
@@ -272,13 +316,19 @@ export function SnippetSidebar() {
                     onChange={(e) => setNewTagName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleCreateTag();
+                        e.preventDefault()
+                        handleCreateTag()
                       }
                     }}
                   />
                   <div className="flex justify-end gap-2">
-                    <PopoverClose render={<Button variant="outline" size="sm">Cancel</Button>} />
+                    <PopoverClose
+                      render={
+                        <Button variant="outline" size="sm">
+                          Cancel
+                        </Button>
+                      }
+                    />
                     <Button
                       size="sm"
                       onClick={handleCreateTag}
@@ -310,7 +360,7 @@ export function SnippetSidebar() {
                     <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
                       {tag.name}
                     </span>
-                    <SidebarMenuBadge className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
+                    <SidebarMenuBadge data-testid="trash-count" className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
                       {tag.count}
                     </SidebarMenuBadge>
                   </SidebarMenuButton>
@@ -357,8 +407,8 @@ export function SnippetSidebar() {
               onChange={(e) => setEditTagName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleEditTag();
+                  e.preventDefault()
+                  handleEditTag()
                 }
               }}
               autoFocus
@@ -368,8 +418,8 @@ export function SnippetSidebar() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setIsEditPopoverOpen(false);
-                  setEditingTagId(null);
+                  setIsEditPopoverOpen(false)
+                  setEditingTagId(null)
                 }}
               >
                 Cancel
@@ -394,8 +444,8 @@ export function SnippetSidebar() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Tag</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the tag "{deletingTag?.name}"?
-              This will remove the tag from all snippets. The snippets themselves will not be deleted.
+              Are you sure you want to delete the tag "{deletingTag?.name}"? This will remove the
+              tag from all snippets. The snippets themselves will not be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -411,5 +461,5 @@ export function SnippetSidebar() {
         </AlertDialogPopup>
       </AlertDialog>
     </Sidebar>
-  );
+  )
 }

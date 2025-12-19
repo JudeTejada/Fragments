@@ -9,6 +9,13 @@ export const IPC_CHANNELS = {
   SNIPPETS_DELETE: 'snippets:delete',
   SNIPPETS_SEARCH: 'snippets:search',
 
+  // Trash operations
+  SNIPPETS_SOFT_DELETE: 'snippets:softDelete',
+  SNIPPETS_RESTORE: 'snippets:restore',
+  SNIPPETS_PERMANENT_DELETE: 'snippets:permanentDelete',
+  SNIPPETS_GET_TRASH: 'snippets:getTrash',
+  SNIPPETS_EMPTY_TRASH: 'snippets:emptyTrash',
+
   // Tags
   TAGS_LIST: 'tags:list',
   TAGS_CREATE: 'tags:create',
@@ -26,7 +33,7 @@ export const IPC_CHANNELS = {
 
   // Backup & System
   BACKUP_EXPORT: 'backup:export',
-  DB_PATH: 'db:path',
-} as const;
+  DB_PATH: 'db:path'
+} as const
 
-export type IPCChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

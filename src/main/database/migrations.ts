@@ -76,5 +76,15 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_snippets_is_favorite ON snippets(is_favorite);
       UPDATE snippets SET is_favorite = 0 WHERE is_favorite IS NULL;
     `
+  },
+
+  // Version 4: Soft delete support (trash/recently deleted)
+  {
+    version: 4,
+    up: `
+      ALTER TABLE snippets ADD COLUMN deleted_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_snippets_deleted_at ON snippets(deleted_at);
+      UPDATE snippets SET deleted_at = NULL WHERE deleted_at IS NULL;
+    `
   }
-];
+]

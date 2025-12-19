@@ -82,9 +82,7 @@ function SnippetRow({
           >
             {title}
           </h3>
-          {isFavorite && (
-            <Star className="size-4 text-amber-500 fill-amber-400" />
-          )}
+          {isFavorite && <Star className="size-4 text-amber-500 fill-amber-400" />}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -140,7 +138,7 @@ export function SnippetList() {
     isSelected: isMultiSelected
   } = useMultiSelect({
     items: filteredSnippets,
-    getItemId: (s) => s.id,
+    getItemId: (s) => s.id
   })
 
   // Context menu hook
@@ -149,7 +147,9 @@ export function SnippetList() {
   const hasNoSnippets = filteredSnippets.length === 0 && !isLoading
   const isSearchActive = searchQuery.trim().length > 0
   const headerTitle = isSearchActive
-    ? (showFavoritesOnly ? 'Search Favorites' : 'Search Results')
+    ? showFavoritesOnly
+      ? 'Search Favorites'
+      : 'Search Results'
     : showFavoritesOnly
       ? 'Favorites'
       : 'All Snippets'
@@ -169,26 +169,32 @@ export function SnippetList() {
   }, [multiSelectedIds, contextMenu.targetId, selectedSnippetId])
 
   // Handle snippet click - UX: only change detail view on normal click, not during multi-select
-  const handleSnippetClick = React.useCallback((snippetId: string, index: number, e: React.MouseEvent) => {
-    handleMultiSelectClick(snippetId, index, e)
+  const handleSnippetClick = React.useCallback(
+    (snippetId: string, index: number, e: React.MouseEvent) => {
+      handleMultiSelectClick(snippetId, index, e)
 
-    // Only update the detail view selection on normal (non-shift) clicks
-    if (!e.shiftKey) {
-      setSelectedSnippetId(snippetId)
-    }
-    // When shift+clicking, keep the detail view on the previously selected snippet
-  }, [handleMultiSelectClick, setSelectedSnippetId])
+      // Only update the detail view selection on normal (non-shift) clicks
+      if (!e.shiftKey) {
+        setSelectedSnippetId(snippetId)
+      }
+      // When shift+clicking, keep the detail view on the previously selected snippet
+    },
+    [handleMultiSelectClick, setSelectedSnippetId]
+  )
 
   // Handle right-click context menu
-  const handleContextMenu = React.useCallback((snippetId: string, e: React.MouseEvent) => {
-    // If right-clicking on an unselected snippet and no multi-selection
-    if (!isMultiSelected(snippetId) && multiSelectedIds.size === 0) {
-      // Select this snippet for detail view
-      setSelectedSnippetId(snippetId)
-    }
+  const handleContextMenu = React.useCallback(
+    (snippetId: string, e: React.MouseEvent) => {
+      // If right-clicking on an unselected snippet and no multi-selection
+      if (!isMultiSelected(snippetId) && multiSelectedIds.size === 0) {
+        // Select this snippet for detail view
+        setSelectedSnippetId(snippetId)
+      }
 
-    contextMenu.open(e, snippetId)
-  }, [isMultiSelected, multiSelectedIds.size, setSelectedSnippetId, contextMenu])
+      contextMenu.open(e, snippetId)
+    },
+    [isMultiSelected, multiSelectedIds.size, setSelectedSnippetId, contextMenu]
+  )
 
   // Context menu actions
   const handleDelete = React.useCallback(async () => {
@@ -211,26 +217,28 @@ export function SnippetList() {
     clearSelection()
   }, [getEffectiveSelection, toggleFavoriteMultiple, clearSelection])
 
-  const contextMenuItems = React.useMemo(() => [
-    {
-      label: 'Add to Favourites',
-      icon: <Heart className="size-4" />,
-      onClick: handleAddToFavorites,
-      testId: 'context-menu-favorites',
-      shortcut: '⌘F',
-      shortcutKey: 'f',
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="size-4" />,
-      onClick: handleDelete,
-      variant: 'destructive' as const,
-      testId: 'context-menu-delete',
-      shortcut: '⌫',
-      shortcutKey: 'Backspace',
-    },
-
-  ], [handleAddToFavorites, handleDelete])
+  const contextMenuItems = React.useMemo(
+    () => [
+      {
+        label: 'Add to Favourites',
+        icon: <Heart className="size-4" />,
+        onClick: handleAddToFavorites,
+        testId: 'context-menu-favorites',
+        shortcut: '⌘F',
+        shortcutKey: 'f'
+      },
+      {
+        label: 'Move to Trash',
+        icon: <Trash2 className="size-4" />,
+        onClick: handleDelete,
+        variant: 'destructive' as const,
+        testId: 'context-menu-delete',
+        shortcut: '⌫',
+        shortcutKey: 'Backspace'
+      }
+    ],
+    [handleAddToFavorites, handleDelete]
+  )
 
   // Handle keyboard shortcuts
   useHotkeys(
@@ -248,7 +256,15 @@ export function SnippetList() {
       enableOnFormTags: false,
       description: 'Delete selected snippet(s)'
     },
-    [selectedSnippetId, multiSelectedIds, deleteSnippet, deleteMultipleSnippets, isSaving, filteredSnippets.length, clearSelection]
+    [
+      selectedSnippetId,
+      multiSelectedIds,
+      deleteSnippet,
+      deleteMultipleSnippets,
+      isSaving,
+      filteredSnippets.length,
+      clearSelection
+    ]
   )
 
   // Clear multi-selection when pressing Escape
@@ -267,9 +283,7 @@ export function SnippetList() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-sm text-foreground">
-            {headerTitle}
-          </h2>
+          <h2 className="font-semibold text-sm text-foreground">{headerTitle}</h2>
           {showFavoritesOnly && <Star className="size-4 text-amber-500 fill-amber-400" />}
           {isMultiSelectMode && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -307,8 +321,12 @@ export function SnippetList() {
                 </EmptyMedia>
                 <EmptyTitle>
                   {isSearchActive
-                    ? showFavoritesOnly ? 'No favorite matches' : 'No results'
-                    : showFavoritesOnly ? 'No favorites yet' : 'No snippets yet'}
+                    ? showFavoritesOnly
+                      ? 'No favorite matches'
+                      : 'No results'
+                    : showFavoritesOnly
+                      ? 'No favorites yet'
+                      : 'No snippets yet'}
                 </EmptyTitle>
                 <EmptyDescription>
                   {isSearchActive

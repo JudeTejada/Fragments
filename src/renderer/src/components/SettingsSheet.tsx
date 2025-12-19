@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from 'react'
 import {
   Sheet,
   SheetTrigger,
@@ -7,197 +7,212 @@ import {
   SheetTitle,
   SheetDescription,
   SheetPanel,
-  SheetFooter,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Database, Download, Loader2, Check, FolderOpen, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { AiBackend } from '@shared/types';
-import { ShortcutInput } from '@/components/ShortcutInput';
+  SheetFooter
+} from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Settings,
+  Database,
+  Download,
+  Loader2,
+  Check,
+  FolderOpen,
+  Sparkles,
+  Trash2
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { AiBackend } from '@shared/types'
+import { ShortcutInput } from '@/components/ShortcutInput'
 
 type SettingsUpdate = Partial<{
-  ai_backend: AiBackend;
-  ollama_model_name: string;
-  quick_capture_shortcut: string;
-}>;
+  ai_backend: AiBackend
+  ollama_model_name: string
+  quick_capture_shortcut: string
+  trash_retention_days: number
+}>
 
 export function SettingsSheet() {
-  const [dbPath, setDbPath] = React.useState<string>('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [isExporting, setIsExporting] = React.useState(false);
-  const [exportResult, setExportResult] = React.useState<{ success: boolean; message: string } | null>(null);
-  const [aiBackend, setAiBackend] = React.useState<AiBackend>('none');
-  const [ollamaModel, setOllamaModel] = React.useState('');
-  const [isSavingSettings, setIsSavingSettings] = React.useState(false);
-  const [isTesting, setIsTesting] = React.useState(false);
-  const [testResult, setTestResult] = React.useState<{ ok: boolean; message?: string } | null>(null);
-  const [models, setModels] = React.useState<string[]>([]);
-  const [quickCaptureShortcut, setQuickCaptureShortcut] = React.useState('');
+  const [dbPath, setDbPath] = React.useState<string>('')
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [isExporting, setIsExporting] = React.useState(false)
+  const [exportResult, setExportResult] = React.useState<{
+    success: boolean
+    message: string
+  } | null>(null)
+  const [aiBackend, setAiBackend] = React.useState<AiBackend>('none')
+  const [ollamaModel, setOllamaModel] = React.useState('')
+  const [isSavingSettings, setIsSavingSettings] = React.useState(false)
+  const [isTesting, setIsTesting] = React.useState(false)
+  const [testResult, setTestResult] = React.useState<{ ok: boolean; message?: string } | null>(null)
+  const [models, setModels] = React.useState<string[]>([])
+  const [quickCaptureShortcut, setQuickCaptureShortcut] = React.useState('')
+  const [trashRetentionDays, setTrashRetentionDays] = React.useState(30)
 
   const loadSettings = React.useCallback(async () => {
     try {
-      const result = await window.api.settings.get();
+      const result = await window.api.settings.get()
       if (result.success && result.data) {
-        const backend = (result.data.ai_backend ?? 'none') as AiBackend;
-        const model = result.data.ollama_model_name ?? '';
-        const shortcut = result.data.quick_capture_shortcut ?? '';
-        setAiBackend(backend);
-        setOllamaModel(model);
-        setQuickCaptureShortcut(shortcut);
-        return { backend, model, shortcut };
+        const backend = (result.data.ai_backend ?? 'none') as AiBackend
+        const model = result.data.ollama_model_name ?? ''
+        const shortcut = result.data.quick_capture_shortcut ?? ''
+        const retentionDays = result.data.trash_retention_days ?? 30
+        setAiBackend(backend)
+        setOllamaModel(model)
+        setQuickCaptureShortcut(shortcut)
+        setTrashRetentionDays(retentionDays)
+        return { backend, model, shortcut, retentionDays }
       }
     } catch (err) {
-      console.error('Failed to load settings:', err);
+      console.error('Failed to load settings:', err)
     }
-    return null;
-  }, []);
+    return null
+  }, [])
 
   const saveSettings = React.useCallback(async (partial: SettingsUpdate) => {
-    setIsSavingSettings(true);
+    setIsSavingSettings(true)
     try {
-      const result = await window.api.settings.update(partial);
+      const result = await window.api.settings.update(partial)
       if (result.success && result.data) {
-        setAiBackend((result.data.ai_backend ?? 'none') as AiBackend);
-        setOllamaModel(result.data.ollama_model_name ?? '');
+        setAiBackend((result.data.ai_backend ?? 'none') as AiBackend)
+        setOllamaModel(result.data.ollama_model_name ?? '')
         if (result.data.quick_capture_shortcut !== undefined) {
-          setQuickCaptureShortcut(result.data.quick_capture_shortcut);
+          setQuickCaptureShortcut(result.data.quick_capture_shortcut)
         }
       }
     } catch (err) {
-      console.error('Failed to update settings:', err);
+      console.error('Failed to update settings:', err)
     } finally {
-      setIsSavingSettings(false);
+      setIsSavingSettings(false)
     }
-  }, []);
+  }, [])
 
-  const fetchModels = React.useCallback(async (backendOverride?: AiBackend) => {
-    const backend = backendOverride ?? aiBackend;
-    if (backend !== 'ollama') {
-      setModels([]);
-      return;
-    }
-    setIsTesting(true);
-    setTestResult(null);
-    try {
-      const result = await window.api.ai.testConnection();
-      if (result.success && result.data) {
-        const detected = result.data.models ?? [];
-        setModels(detected);
-        if (detected.length > 0 && !ollamaModel) {
-          setOllamaModel(detected[0]);
-          await saveSettings({ ollama_model_name: detected[0] });
-        }
-        setTestResult({ ok: result.data.ok, message: result.data.message });
-      } else {
-        setModels([]);
-        setTestResult({ ok: false, message: result.error || 'Failed to test connection' });
+  const fetchModels = React.useCallback(
+    async (backendOverride?: AiBackend) => {
+      const backend = backendOverride ?? aiBackend
+      if (backend !== 'ollama') {
+        setModels([])
+        return
       }
-    } catch (err) {
-      setModels([]);
-      setTestResult({
-        ok: false,
-        message: err instanceof Error ? err.message : 'Failed to test connection',
-      });
-    } finally {
-      setIsTesting(false);
-    }
-  }, [aiBackend, ollamaModel, saveSettings]);
+      setIsTesting(true)
+      setTestResult(null)
+      try {
+        const result = await window.api.ai.testConnection()
+        if (result.success && result.data) {
+          const detected = result.data.models ?? []
+          setModels(detected)
+          if (detected.length > 0 && !ollamaModel) {
+            setOllamaModel(detected[0])
+            await saveSettings({ ollama_model_name: detected[0] })
+          }
+          setTestResult({ ok: result.data.ok, message: result.data.message })
+        } else {
+          setModels([])
+          setTestResult({ ok: false, message: result.error || 'Failed to test connection' })
+        }
+      } catch (err) {
+        setModels([])
+        setTestResult({
+          ok: false,
+          message: err instanceof Error ? err.message : 'Failed to test connection'
+        })
+      } finally {
+        setIsTesting(false)
+      }
+    },
+    [aiBackend, ollamaModel, saveSettings]
+  )
 
   // Load DB path on open
   const handleOpenChange = async (open: boolean) => {
     if (open) {
-      setIsLoading(true);
-      setExportResult(null);
-      setTestResult(null);
+      setIsLoading(true)
+      setExportResult(null)
+      setTestResult(null)
       try {
         const [dbResult, settings] = await Promise.all([
           window.api.system.getDbPath(),
-          loadSettings(),
-        ]);
+          loadSettings()
+        ])
         if (dbResult.success && dbResult.data) {
-          setDbPath(dbResult.data);
+          setDbPath(dbResult.data)
         }
         if (settings?.backend === 'ollama') {
-          await fetchModels(settings.backend);
+          await fetchModels(settings.backend)
         } else {
-          setModels([]);
+          setModels([])
         }
       } catch (err) {
-        console.error('Failed to get DB path:', err);
+        console.error('Failed to get DB path:', err)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
     }
-  };
+  }
 
   // Export database
   const handleExport = async () => {
-    setIsExporting(true);
-    setExportResult(null);
+    setIsExporting(true)
+    setExportResult(null)
     try {
-      const result = await window.api.backup.export();
+      const result = await window.api.backup.export()
       if (result.success && result.data) {
         setExportResult({
           success: true,
-          message: `Exported to: ${result.data}`,
-        });
+          message: `Exported to: ${result.data}`
+        })
       } else if (result.error === 'Export canceled') {
         // User canceled, no message needed
-        setExportResult(null);
+        setExportResult(null)
       } else {
         setExportResult({
           success: false,
-          message: result.error || 'Export failed',
-        });
+          message: result.error || 'Export failed'
+        })
       }
     } catch (err) {
       setExportResult({
         success: false,
-        message: String(err),
-      });
+        message: String(err)
+      })
     } finally {
-      setIsExporting(false);
+      setIsExporting(false)
     }
-  };
+  }
 
   const handleBackendChange = async (value: string | null) => {
-    if (!value) return;
-    const backend = value as AiBackend;
-    setAiBackend(backend);
-    setTestResult(null);
-    await saveSettings({ ai_backend: backend });
-    await fetchModels(backend);
-  };
+    if (!value) return
+    const backend = value as AiBackend
+    setAiBackend(backend)
+    setTestResult(null)
+    await saveSettings({ ai_backend: backend })
+    await fetchModels(backend)
+  }
 
   const handleModelBlur = async () => {
-    setTestResult(null);
-    await saveSettings({ ollama_model_name: ollamaModel.trim() });
-  };
+    setTestResult(null)
+    await saveSettings({ ollama_model_name: ollamaModel.trim() })
+  }
 
   const handleTestConnection = async () => {
     if (aiBackend === 'ollama') {
-      await saveSettings({ ollama_model_name: ollamaModel.trim() });
+      await saveSettings({ ollama_model_name: ollamaModel.trim() })
     }
-    await fetchModels();
-  };
+    await fetchModels()
+  }
 
   return (
     <Sheet onOpenChange={handleOpenChange}>
-      <SheetTrigger
-        render={<Button variant="ghost" size="icon" className="size-7 rounded-lg" />}
-      >
+      <SheetTrigger render={<Button variant="ghost" size="icon" className="size-7 rounded-lg" />}>
         <Settings className="size-4" />
         <span className="sr-only">Settings</span>
       </SheetTrigger>
       <SheetContent side="right">
         <SheetHeader>
           <SheetTitle>Settings</SheetTitle>
-          <SheetDescription>
-            Configure your Code Snippets application
-          </SheetDescription>
+          <SheetDescription>Configure your Code Snippets application</SheetDescription>
         </SheetHeader>
 
         <SheetPanel>
@@ -228,8 +243,8 @@ export function SettingsSheet() {
                     onClick={() => {
                       // Open folder in Finder/Explorer
                       if (dbPath) {
-                        const folderPath = dbPath.substring(0, dbPath.lastIndexOf('/'));
-                        window.electron.ipcRenderer.send('shell:openPath', folderPath);
+                        const folderPath = dbPath.substring(0, dbPath.lastIndexOf('/'))
+                        window.electron.ipcRenderer.send('shell:openPath', folderPath)
                       }
                     }}
                     disabled={!dbPath}
@@ -244,16 +259,9 @@ export function SettingsSheet() {
 
               {/* Export Library */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Export Library
-                </Label>
+                <Label className="text-xs text-muted-foreground">Export Library</Label>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={isExporting}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
                     {isExporting ? (
                       <Loader2 className="size-4 mr-2 animate-spin" />
                     ) : (
@@ -263,10 +271,12 @@ export function SettingsSheet() {
                   </Button>
                 </div>
                 {exportResult && (
-                  <p className={cn(
-                    "text-xs",
-                    exportResult.success ? "text-green-600" : "text-destructive"
-                  )}>
+                  <p
+                    className={cn(
+                      'text-xs',
+                      exportResult.success ? 'text-green-600' : 'text-destructive'
+                    )}
+                  >
                     {exportResult.success && <Check className="size-3 inline mr-1" />}
                     {exportResult.message}
                   </p>
@@ -274,135 +284,158 @@ export function SettingsSheet() {
                 <p className="text-xs text-muted-foreground/70">
                   Creates a backup of your entire snippet library.
                 </p>
-            </div>
-          </div>
-
-          {/* Quick Capture */}
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Sparkles className="size-4" />
-              Quick capture
-            </h3>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
-                Global shortcut
-              </Label>
-              <ShortcutInput
-                value={quickCaptureShortcut}
-                onChange={(value) => {
-                  setQuickCaptureShortcut(value);
-                  void saveSettings({ quick_capture_shortcut: value });
-                }}
-              />
-              <p className="text-xs text-muted-foreground/70">
-                Use this shortcut to pull clipboard text into a new snippet without leaving your current app.
-              </p>
-            </div>
-          </div>
-
-          {/* AI Section */}
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Sparkles className="size-4" />
-              AI
-            </h3>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
-                AI Backend
-              </Label>
-              <Select value={aiBackend} onValueChange={handleBackendChange}>
-                <SelectTrigger size="sm" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectPopup>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="ollama">Ollama (local)</SelectItem>
-                </SelectPopup>
-              </Select>
-              <p className="text-xs text-muted-foreground/70">
-                Use your local Ollama server at http://localhost:11434. No cloud models are used.
-              </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground" htmlFor="ollama-model">
-                Ollama model
-              </Label>
-              {models.length > 0 ? (
-                <Select
-                  value={ollamaModel || models[0]}
-                  onValueChange={async (value) => {
-                    if (!value) return;
-                    setOllamaModel(value);
-                    setTestResult(null);
-                    await saveSettings({ ollama_model_name: value });
+            {/* Quick Capture */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="size-4" />
+                Quick capture
+              </h3>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Global shortcut</Label>
+                <ShortcutInput
+                  value={quickCaptureShortcut}
+                  onChange={(value) => {
+                    setQuickCaptureShortcut(value)
+                    void saveSettings({ quick_capture_shortcut: value })
                   }}
-                  disabled={aiBackend !== 'ollama'}
-                >
+                />
+                <p className="text-xs text-muted-foreground/70">
+                  Use this shortcut to pull clipboard text into a new snippet without leaving your
+                  current app.
+                </p>
+              </div>
+            </div>
+
+            {/* Trash & Recovery Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Trash2 className="size-4" />
+                Trash & Recovery
+              </h3>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Retention period (days)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={trashRetentionDays}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 30
+                    setTrashRetentionDays(value)
+                    void saveSettings({ trash_retention_days: value })
+                  }}
+                  className="w-20 text-sm"
+                />
+                <p className="text-xs text-muted-foreground/70">
+                  Deleted snippets are kept in trash for recovery. They will be permanently deleted
+                  after this many days.
+                </p>
+              </div>
+            </div>
+
+            {/* AI Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="size-4" />
+                AI
+              </h3>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">AI Backend</Label>
+                <Select value={aiBackend} onValueChange={handleBackendChange}>
                   <SelectTrigger size="sm" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectPopup>
-                    {models.map((model) => (
-                      <SelectItem key={model} value={model}>
-                        {model}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="ollama">Ollama (local)</SelectItem>
                   </SelectPopup>
                 </Select>
-              ) : (
-                <Input
-                  id="ollama-model"
-                  value={ollamaModel}
-                  onChange={(e) => setOllamaModel(e.target.value)}
-                  onBlur={handleModelBlur}
-                  placeholder="e.g. qwen2.5-coder"
-                  disabled={aiBackend !== 'ollama'}
-                  className="text-sm"
-                />
-              )}
-              <p className="text-xs text-muted-foreground/70">
-                Detected models are listed automatically. If none appear, type a model name installed in Ollama.
-              </p>
-            </div>
+                <p className="text-xs text-muted-foreground/70">
+                  Use your local Ollama server at http://localhost:11434. No cloud models are used.
+                </p>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestConnection}
-                disabled={aiBackend !== 'ollama' || isTesting || isSavingSettings}
-              >
-                {isTesting ? (
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground" htmlFor="ollama-model">
+                  Ollama model
+                </Label>
+                {models.length > 0 ? (
+                  <Select
+                    value={ollamaModel || models[0]}
+                    onValueChange={async (value) => {
+                      if (!value) return
+                      setOllamaModel(value)
+                      setTestResult(null)
+                      await saveSettings({ ollama_model_name: value })
+                    }}
+                    disabled={aiBackend !== 'ollama'}
+                  >
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectPopup>
+                      {models.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectPopup>
+                  </Select>
                 ) : (
-                  <Sparkles className="size-4 mr-2" />
+                  <Input
+                    id="ollama-model"
+                    value={ollamaModel}
+                    onChange={(e) => setOllamaModel(e.target.value)}
+                    onBlur={handleModelBlur}
+                    placeholder="e.g. qwen2.5-coder"
+                    disabled={aiBackend !== 'ollama'}
+                    className="text-sm"
+                  />
                 )}
-                Refresh models
-              </Button>
-              {isSavingSettings && (
-                <span className="text-xs text-muted-foreground">Saving…</span>
-              )}
-              {testResult && (
-                <span className={cn(
-                  "text-xs font-medium",
-                  testResult.ok ? "text-green-600" : "text-destructive"
-                )}>
-                  {testResult.ok ? 'Connected' : 'Unable to connect'}
-                </span>
+                <p className="text-xs text-muted-foreground/70">
+                  Detected models are listed automatically. If none appear, type a model name
+                  installed in Ollama.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestConnection}
+                  disabled={aiBackend !== 'ollama' || isTesting || isSavingSettings}
+                >
+                  {isTesting ? (
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4 mr-2" />
+                  )}
+                  Refresh models
+                </Button>
+                {isSavingSettings && <span className="text-xs text-muted-foreground">Saving…</span>}
+                {testResult && (
+                  <span
+                    className={cn(
+                      'text-xs font-medium',
+                      testResult.ok ? 'text-green-600' : 'text-destructive'
+                    )}
+                  >
+                    {testResult.ok ? 'Connected' : 'Unable to connect'}
+                  </span>
+                )}
+              </div>
+              {testResult?.message && (
+                <p className={cn('text-xs', testResult.ok ? 'text-green-700' : 'text-destructive')}>
+                  {testResult.message}
+                </p>
               )}
             </div>
-            {testResult?.message && (
-              <p className={cn(
-                "text-xs",
-                testResult.ok ? "text-green-700" : "text-destructive"
-              )}>
-                {testResult.message}
-              </p>
-            )}
-          </div>
 
             {/* About Section */}
             <div className="space-y-4 pt-4 border-t">
@@ -426,5 +459,5 @@ export function SettingsSheet() {
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

@@ -8,7 +8,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   css: 'CSS',
   markdown: 'Markdown',
   json: 'JSON',
-  plaintext: 'Plain Text',
+  plaintext: 'Plain Text'
 }
 
 export class TestUtils {
@@ -34,7 +34,9 @@ export class TestUtils {
       await this.selectLanguage(language)
     }
     await this.waitForSaveIndicator()
-    await this.page.waitForSelector(`[data-testid="snippet-row"][data-title="${title}"]`, { timeout: 10000 })
+    await this.page.waitForSelector(`[data-testid="snippet-row"][data-title="${title}"]`, {
+      timeout: 10000
+    })
   }
 
   async selectLanguage(language: string) {
@@ -48,18 +50,20 @@ export class TestUtils {
   }
 
   async deleteSnippet() {
-    await this.page.getByRole('button', { name: 'Delete' }).click()
+    await this.page.getByRole('button', { name: 'Move to Trash' }).click()
     await this.page.waitForTimeout(150)
   }
 
   async toggleFavorite() {
-    const favButton = this.page.getByRole('button', { name: /add to favorites|remove from favorites/i }).first()
+    const favButton = this.page
+      .getByRole('button', { name: /add to favorites|remove from favorites/i })
+      .first()
     await favButton.click()
     await this.page.waitForTimeout(150)
   }
 
   async addTag(tagName: string) {
-    const input = this.page.getByPlaceholder('Add tag...')
+    const input = this.page.getByPlaceholder('+ Tag')
     await input.fill(tagName)
     await input.press('Enter')
     await this.page.waitForTimeout(150)
@@ -107,12 +111,20 @@ export class TestUtils {
   }
 
   async shiftClickSnippet(title: string) {
-    await this.page.getByTestId('snippet-row').filter({ hasText: title }).first().click({ modifiers: ['Shift'] })
+    await this.page
+      .getByTestId('snippet-row')
+      .filter({ hasText: title })
+      .first()
+      .click({ modifiers: ['Shift'] })
     await this.page.waitForTimeout(100)
   }
 
   async rightClickSnippet(title: string) {
-    await this.page.getByTestId('snippet-row').filter({ hasText: title }).first().click({ button: 'right' })
+    await this.page
+      .getByTestId('snippet-row')
+      .filter({ hasText: title })
+      .first()
+      .click({ button: 'right' })
     await this.page.waitForTimeout(100)
   }
 
@@ -121,4 +133,3 @@ export class TestUtils {
     await this.page.waitForTimeout(150)
   }
 }
-
