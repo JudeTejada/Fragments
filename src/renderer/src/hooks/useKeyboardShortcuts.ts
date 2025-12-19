@@ -1,5 +1,5 @@
-import { useHotkeys } from 'react-hotkeys-hook';
-import * as React from 'react';
+import { useHotkeys } from 'react-hotkeys-hook'
+import * as React from 'react'
 
 /**
  * Simple hook for registering keyboard shortcuts using react-hotkeys-hook
@@ -10,14 +10,14 @@ export function useKeyboardShortcut(
   callback: (event: KeyboardEvent) => void,
   options?: Parameters<typeof useHotkeys>[2]
 ) {
-  const callbackRef = React.useRef(callback);
-  callbackRef.current = callback;
+  const callbackRef = React.useRef(callback)
+  callbackRef.current = callback
 
   useHotkeys(
     keys,
     (event) => {
-      event.preventDefault();
-      callbackRef.current(event);
+      event.preventDefault()
+      callbackRef.current(event)
     },
     {
       description: 'Keyboard shortcut',
@@ -25,7 +25,7 @@ export function useKeyboardShortcut(
       ...options
     },
     []
-  );
+  )
 }
 
 /**
@@ -44,5 +44,5 @@ export function useFocusShortcut(
       enableOnFormTags: true,
       ...options
     }
-  );
+  )
 }
