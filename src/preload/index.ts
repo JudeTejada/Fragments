@@ -10,7 +10,10 @@ import type {
   Tag,
   AiRun,
   AiActionType,
-  TrashedSnippet
+  TrashedSnippet,
+  Fragment,
+  CreateFragmentPayload,
+  UpdateFragmentPayload
 } from '../shared/types'
 
 // Response type from IPC handlers
@@ -113,6 +116,20 @@ const api = {
     testConnection: (): Promise<
       IPCResponse<{ ok: boolean; message?: string; models?: string[] }>
     > => ipcRenderer.invoke(IPC_CHANNELS.AI_TEST_CONNECTION)
+  },
+
+  fragments: {
+    create: (data: CreateFragmentPayload): Promise<IPCResponse<Fragment>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FRAGMENTS_CREATE, data),
+
+    update: (data: UpdateFragmentPayload): Promise<IPCResponse<Fragment>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FRAGMENTS_UPDATE, data),
+
+    delete: (id: string): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FRAGMENTS_DELETE, { id }),
+
+    reorder: (snippetId: string, fragmentIds: string[]): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FRAGMENTS_REORDER, { snippetId, fragmentIds })
   }
 }
 

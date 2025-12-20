@@ -1,5 +1,4 @@
 import { test, expect } from '../utils/base-test'
-import { TEST_SNIPPETS } from '../fixtures/test-data'
 
 test.describe('Application Flow (Electron)', () => {
   test('shows empty state on first launch', async ({ page, testUtils }) => {
@@ -7,12 +6,14 @@ test.describe('Application Flow (Electron)', () => {
     await expect(page.getByText('No snippets yet')).toBeVisible()
     await expect(page.getByText('Create your first snippet to get started')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create Snippet' })).toBeVisible()
-    await expect(page.getByText('No snippet selected')).toBeVisible()
+    await expect(page.getByText('Select a snippet')).toBeVisible()
   })
 
   test('creates a snippet and displays it', async ({ page, testUtils }) => {
     await testUtils.createSnippet('Test Snippet', 'console.log("test");')
-    await expect(page.getByPlaceholder('Snippet title...')).toHaveValue('Test Snippet')
+    // Use contenteditable text check
+    const titleElement = page.locator('h1').first()
+    await expect(titleElement).toContainText('Test Snippet')
     await expect(page.locator('.cm-content')).toContainText('console.log("test");')
     await expect(page.getByText('Saved')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Test Snippet' })).toBeVisible()
@@ -23,10 +24,10 @@ test.describe('Application Flow (Electron)', () => {
     await testUtils.createSnippet(TEST_SNIPPETS[1].title, TEST_SNIPPETS[1].content)
 
     await page.locator(`[data-testid="snippet-row"][data-title="${TEST_SNIPPETS[0].title}"]`).first().click()
-    await expect(page.getByPlaceholder('Snippet title...')).toHaveValue(TEST_SNIPPETS[0].title)
+    await expect(page.locator('h1').first()).toContainText(TEST_SNIPPETS[0].title)
 
     await page.locator(`[data-testid="snippet-row"][data-title="${TEST_SNIPPETS[1].title}"]`).first().click()
-    await expect(page.getByPlaceholder('Snippet title...')).toHaveValue(TEST_SNIPPETS[1].title)
+    await expect(page.locator('h1').first()).toContainText(TEST_SNIPPETS[1].title)
   })
 
   test('persists snippets after reload', async ({ page, testUtils }) => {
