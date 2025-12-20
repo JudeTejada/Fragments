@@ -8,6 +8,7 @@ import type {
   SearchParams
 } from '../../shared/types'
 import { TagRepository } from './tagRepository'
+import { FragmentRepository } from './fragmentRepository'
 
 // Generate a simple UUID v4
 function generateId(): string {
@@ -73,7 +74,7 @@ export const SnippetRepository = {
         .all() as SnippetRow[]
     }
 
-    // Get tags for each snippet
+    // Get tags and fragments for each snippet
     return snippetRows.map((row) => ({
       id: row.id,
       title: row.title,
@@ -84,7 +85,8 @@ export const SnippetRepository = {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       deletedAt: row.deleted_at,
-      tags: SnippetRepository.getTagsForSnippet(row.id)
+      tags: SnippetRepository.getTagsForSnippet(row.id),
+      fragments: FragmentRepository.listForSnippet(row.id)
     }))
   },
 
@@ -116,7 +118,8 @@ export const SnippetRepository = {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       deletedAt: row.deleted_at,
-      tags: SnippetRepository.getTagsForSnippet(row.id)
+      tags: SnippetRepository.getTagsForSnippet(row.id),
+      fragments: FragmentRepository.listForSnippet(row.id)
     }
   },
 
@@ -158,6 +161,9 @@ export const SnippetRepository = {
           insertTagLink.run(id, tag.id)
         }
       }
+
+      // Create initial fragment with the snippet content
+      FragmentRepository.createInitial(id, data.language, data.content)
     })
 
     transaction()
@@ -291,7 +297,8 @@ export const SnippetRepository = {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       deletedAt: row.deleted_at,
-      tags: SnippetRepository.getTagsForSnippet(row.id)
+      tags: SnippetRepository.getTagsForSnippet(row.id),
+      fragments: FragmentRepository.listForSnippet(row.id)
     }))
   },
 
@@ -329,7 +336,7 @@ export const SnippetRepository = {
     const result = db
       .prepare(
         `
-      UPDATE snippets 
+      UPDATE snippets
       SET deleted_at = ?
       WHERE id = ? AND deleted_at IS NULL
     `
@@ -348,7 +355,7 @@ export const SnippetRepository = {
     const result = db
       .prepare(
         `
-      UPDATE snippets 
+      UPDATE snippets
       SET deleted_at = NULL
       WHERE id = ? AND deleted_at IS NOT NULL
     `
@@ -414,6 +421,7 @@ export const SnippetRepository = {
         updatedAt: row.updated_at,
         deletedAt: row.deleted_at!,
         tags: SnippetRepository.getTagsForSnippet(row.id),
+        fragments: FragmentRepository.listForSnippet(row.id),
         daysSinceDeleted,
         daysUntilDeletion
       }

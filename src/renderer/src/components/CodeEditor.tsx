@@ -11,12 +11,10 @@ import { EditorView } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 import * as React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, Copy, Loader2 } from 'lucide-react'
+import { Check, Copy, ChevronDown, Loader2, FileCode } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
-import { SUPPORTED_LANGUAGES } from '@shared/types'
 import { cn } from '@/lib/utils'
+import { SUPPORTED_LANGUAGES } from '@shared/types'
 
 // Language extension mapping
 const languageExtensions: Record<string, () => Extension> = {
@@ -29,94 +27,97 @@ const languageExtensions: Record<string, () => Extension> = {
   markdown: () => markdown()
 }
 
-const cursorDarkHighlightStyle = HighlightStyle.define([
-  {
-    tag: [tags.keyword, tags.modifier, tags.operatorKeyword, tags.controlKeyword],
-    color: '#C586C0',
-    fontWeight: 500
-  },
-  {
-    tag: [tags.string, tags.special(tags.string), tags.regexp, tags.docString],
-    color: '#CE9178'
-  },
-  {
-    tag: [tags.number, tags.bool, tags.atom],
-    color: '#B5CEA8'
-  },
-  {
-    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    color: '#DCDCAA'
-  },
-  {
-    tag: [tags.variableName, tags.self, tags.propertyName],
-    color: '#9CDCFE'
-  },
-  {
-    tag: [tags.typeName, tags.className, tags.tagName],
-    color: '#4EC9B0'
-  },
-  {
-    tag: [tags.attributeName],
-    color: '#9CDCFE'
-  },
-  {
-    tag: [tags.comment, tags.lineComment, tags.blockComment],
-    color: '#6A9955',
-    fontStyle: 'italic'
-  },
-  {
-    tag: [tags.punctuation, tags.separator],
-    color: '#D4D4D4'
-  }
-])
-
-// Cursor-inspired colors for LIGHT mode (darker for contrast)
+// Calm, muted syntax highlighting for LIGHT mode
 const cursorLightHighlightStyle = HighlightStyle.define([
   {
     tag: [tags.keyword, tags.modifier, tags.operatorKeyword, tags.controlKeyword],
-    color: '#AF00DB',
+    color: '#7c3aed', // Muted purple
     fontWeight: 500
   },
   {
     tag: [tags.string, tags.special(tags.string), tags.regexp, tags.docString],
-    color: '#A31515'
+    color: '#059669' // Muted emerald
   },
   {
     tag: [tags.number, tags.bool, tags.atom],
-    color: '#098658'
+    color: '#d97706' // Muted amber
   },
   {
     tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    color: '#795E26'
+    color: '#2563eb' // Muted blue
   },
   {
     tag: [tags.variableName, tags.self, tags.propertyName],
-    color: '#001080'
+    color: '#0891b2' // Muted cyan
   },
   {
     tag: [tags.typeName, tags.className, tags.tagName],
-    color: '#267F99'
+    color: '#7c3aed' // Muted purple (same as keyword for subtlety)
   },
   {
     tag: [tags.attributeName],
-    color: '#0451A5'
+    color: '#0891b2'
   },
   {
     tag: [tags.comment, tags.lineComment, tags.blockComment],
-    color: '#008000',
+    color: '#9ca3af', // Gray
     fontStyle: 'italic'
   },
   {
     tag: [tags.punctuation, tags.separator],
-    color: '#383a42'
+    color: '#6b7280' // Gray-500
   }
 ])
 
+// Dark mode syntax highlighting (muted)
+const cursorDarkHighlightStyle = HighlightStyle.define([
+  {
+    tag: [tags.keyword, tags.modifier, tags.operatorKeyword, tags.controlKeyword],
+    color: '#a78bfa',
+    fontWeight: 500
+  },
+  {
+    tag: [tags.string, tags.special(tags.string), tags.regexp, tags.docString],
+    color: '#34d399'
+  },
+  {
+    tag: [tags.number, tags.bool, tags.atom],
+    color: '#fbbf24'
+  },
+  {
+    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
+    color: '#60a5fa'
+  },
+  {
+    tag: [tags.variableName, tags.self, tags.propertyName],
+    color: '#22d3ee'
+  },
+  {
+    tag: [tags.typeName, tags.className, tags.tagName],
+    color: '#a78bfa'
+  },
+  {
+    tag: [tags.attributeName],
+    color: '#22d3ee'
+  },
+  {
+    tag: [tags.comment, tags.lineComment, tags.blockComment],
+    color: '#6b7280',
+    fontStyle: 'italic'
+  },
+  {
+    tag: [tags.punctuation, tags.separator],
+    color: '#9ca3af'
+  }
+])
+
+// Calm editor theme
 const cursorTheme = EditorView.theme({
   '&': {
     backgroundColor: 'transparent',
     fontSize: '13px',
-    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace'
+    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace',
+    lineHeight: '1.5'
   },
   '.cm-content': {
     padding: '16px 0',
@@ -124,28 +125,31 @@ const cursorTheme = EditorView.theme({
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
-    lineHeight: '1.6'
+    lineHeight: 'inherit'
   },
   '.cm-line': {
     padding: '0 16px'
   },
   '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 12px 0 0',
-    color: '#858585',
-    fontSize: '12px'
+    padding: '0 16px 0 0',
+    color: 'var(--muted-foreground)',
+    fontSize: '12px',
+    fontWeight: '400'
   },
   '.cm-gutters': {
     backgroundColor: 'transparent',
-    borderRight: 'none'
+    borderRight: 'none',
+    color: 'var(--muted-foreground)'
   },
   '.cm-activeLineGutter': {
-    color: 'var(--foreground)'
+    color: 'var(--foreground)',
+    fontWeight: '500'
   },
   '.cm-activeLine': {
-    backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)'
+    backgroundColor: 'color-mix(in srgb, var(--muted) 30%, transparent)'
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'color-mix(in srgb, var(--primary) 15%, transparent)'
+    backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)'
   },
   '.cm-cursor': {
     borderLeftColor: 'var(--primary)',
@@ -153,14 +157,19 @@ const cursorTheme = EditorView.theme({
   },
   '.cm-foldPlaceholder': {
     backgroundColor: 'var(--muted)',
-    color: 'var(--muted-foreground)'
+    color: 'var(--muted-foreground)',
+    borderRadius: '2px'
   },
   '.cm-tooltip': {
     border: '1px solid var(--border)',
-    backgroundColor: 'var(--popover)'
+    backgroundColor: 'var(--popover)',
+    borderRadius: '6px'
   },
   '.cm-panels': {
     borderTop: '1px solid var(--border)'
+  },
+  '.cm-panel.cm-search': {
+    backgroundColor: 'var(--background)'
   }
 })
 
@@ -210,7 +219,6 @@ export function CodeEditor({
   }, [])
 
   const extensions = React.useMemo(() => {
-    // Use appropriate color scheme based on theme
     const highlightStyle = isDarkMode ? cursorDarkHighlightStyle : cursorLightHighlightStyle
     const exts = [cursorTheme, syntaxHighlighting(highlightStyle), EditorView.lineWrapping]
 
@@ -225,6 +233,7 @@ export function CodeEditor({
   const [copyState, setCopyState] = React.useState<CopyState>('idle')
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isFocused, setIsFocused] = React.useState(false)
+  const [showLangMenu, setShowLangMenu] = React.useState(false)
 
   const languageLabel = React.useMemo(() => {
     const match = SUPPORTED_LANGUAGES.find((item) => item.value === language)
@@ -238,7 +247,7 @@ export function CodeEditor({
   }, [language])
 
   const handleCopy = React.useCallback(async () => {
-    if (!value) {
+    if (!value || readOnly) {
       return
     }
 
@@ -249,23 +258,21 @@ export function CodeEditor({
 
     try {
       setCopyState('copying')
-      await writeToClipboard(value)
+      await navigator.clipboard.writeText(value)
       setCopyState('copied')
       copyTimeoutRef.current = setTimeout(() => {
         setCopyState('idle')
         copyTimeoutRef.current = null
       }, 1800)
-    } catch (error) {
-      console.error('Failed to copy snippet', error)
+    } catch {
       setCopyState('idle')
     }
-  }, [value])
+  }, [value, readOnly])
 
   React.useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
-        copyTimeoutRef.current = null
       }
     }
   }, [])
@@ -280,71 +287,127 @@ export function CodeEditor({
   const handleFocus = React.useCallback(() => setIsFocused(true), [])
   const handleBlur = React.useCallback(() => setIsFocused(false), [])
 
+  const handleLanguageChange = (newLang: string) => {
+    // Emit custom event for parent to handle language change
+    window.dispatchEvent(
+      new CustomEvent('snippet:change-language', {
+        detail: { language: newLang }
+      })
+    )
+    setShowLangMenu(false)
+  }
+
   return (
     <div
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card',
+        'group relative flex flex-col overflow-hidden',
+        'rounded-xl border border-border/40 bg-muted/10',
+        'shadow-sm transition-all duration-200',
+        isFocused && 'ring-1 ring-primary/15 border-primary/30',
         className
       )}
-      data-focused={isFocused ? 'true' : undefined}
     >
-      <div className="relative flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-foreground">{languageLabel}</span>
-          <span className="text-xs text-muted-foreground">{readOnly ? 'Read only' : 'Editing'}</span>
-        </div>
+      {/* Header Bar */}
+      <div className="relative flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
+        {/* Left: Language selector */}
+        <button
+          onClick={() => setShowLangMenu(!showLangMenu)}
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1 rounded-md',
+            'text-xs font-medium text-foreground',
+            'hover:bg-muted/50 transition-colors',
+            'focus:outline-none focus:ring-1 focus:ring-primary/20'
+          )}
+        >
+          <FileCode className="size-3.5 text-muted-foreground" />
+          {languageLabel}
+          <ChevronDown className="size-3 text-muted-foreground" />
+        </button>
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-7"
-                onClick={handleCopy}
-                disabled={!value.length}
-              >
-                <span className="sr-only">Copy code</span>
-                <AnimatePresence mode="wait" initial={false}>
-                  {copyState === 'copied' ? (
-                    <motion.span
-                      key="copied"
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="text-success"
-                    >
-                      <Check className="size-4" />
-                    </motion.span>
-                  ) : copyState === 'copying' ? (
-                    <motion.span
-                      key="copying"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <Loader2 className="size-4 animate-spin" />
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="idle"
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <Copy className="size-4" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Button>
-            }
-          />
-          <TooltipPopup>{copyState === 'copied' ? 'Copied!' : 'Copy to clipboard'}</TooltipPopup>
-        </Tooltip>
+        {/* Language dropdown menu */}
+        <AnimatePresence>
+          {showLangMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="absolute top-full left-3 mt-1 z-50"
+            >
+              <div className="bg-popover border border-border/50 rounded-lg shadow-lg overflow-hidden py-1 min-w-[140px]">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.value}
+                    onClick={() => handleLanguageChange(lang.value)}
+                    className={cn(
+                      'w-full px-3 py-1.5 text-left text-xs',
+                      'hover:bg-muted/50 transition-colors',
+                      language === lang.value && 'bg-muted/50 text-foreground font-medium'
+                    )}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Right: Copy button + Read-only indicator */}
+        <div className="flex items-center gap-2">
+          {readOnly && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">
+              Read-only
+            </span>
+          )}
+          <button
+            onClick={handleCopy}
+            disabled={!value.length || readOnly || copyState === 'copying'}
+            className={cn(
+              'p-1.5 rounded-md transition-all duration-150',
+              'text-muted-foreground hover:text-foreground',
+              'hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed',
+              copyState === 'copied' && 'text-success'
+            )}
+            title={copyState === 'copied' ? 'Copied!' : 'Copy to clipboard'}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {copyState === 'copied' ? (
+                <motion.div
+                  key="copied"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                >
+                  <Check className="size-3.5" />
+                </motion.div>
+              ) : copyState === 'copying' ? (
+                <motion.div
+                  key="copying"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Loader2 className="size-3.5 animate-spin" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="copy"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                >
+                  <Copy className="size-3.5" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </button>
+        </div>
       </div>
 
+      {/* Editor content */}
       <div className="relative flex-1" style={{ minHeight: 'inherit' }}>
         <CodeMirror
           value={value}
@@ -371,21 +434,4 @@ export function CodeEditor({
       </div>
     </div>
   )
-}
-
-async function writeToClipboard(text: string) {
-  if (navigator?.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'absolute'
-  textarea.style.left = '-9999px'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
 }
