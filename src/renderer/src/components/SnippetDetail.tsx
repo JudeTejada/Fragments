@@ -166,16 +166,20 @@ export function SnippetDetail() {
   // Auto-save effect for title and notes
   React.useEffect(() => {
     if (!selectedSnippet) return
-    if (skipAutoSaveRef.current) {
-      skipAutoSaveRef.current = false
-      return
-    }
     const isDebounceStale = debouncedTitle !== title || debouncedNotes !== notes
     if (isDebounceStale) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
       debouncedNotes !== (selectedSnippet.notes ?? '')
+
+    if (skipAutoSaveRef.current) {
+      if (!hasChanges) {
+        skipAutoSaveRef.current = false
+        return
+      }
+      skipAutoSaveRef.current = false
+    }
 
     if (hasChanges) {
       updateSnippet({
@@ -204,10 +208,18 @@ export function SnippetDetail() {
 
   React.useEffect(() => {
     if (!activeFragment || !selectedSnippet) return
-    if (skipAutoSaveRef.current) return
 
     // Check if content has actually changed from the fragment's stored content
-    if (debouncedFragmentContent !== activeFragment.content) {
+    const hasContentChanges = debouncedFragmentContent !== activeFragment.content
+    if (skipAutoSaveRef.current) {
+      if (!hasContentChanges) {
+        skipAutoSaveRef.current = false
+        return
+      }
+      skipAutoSaveRef.current = false
+    }
+
+    if (hasContentChanges) {
       window.api.fragments.update({
         id: activeFragment.id,
         content: debouncedFragmentContent
