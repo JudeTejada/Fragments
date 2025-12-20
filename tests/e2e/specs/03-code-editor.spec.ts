@@ -12,14 +12,24 @@ test.describe('Code Editor', () => {
   })
 
   test('changes language and shows save indicator', async ({ page, testUtils }) => {
-    await page.getByPlaceholder('Snippet title...').fill('Language Test')
+    // Use contenteditable for title
+    const titleElement = page.locator('h1').first()
+    await titleElement.click()
+    await page.keyboard.press('Meta+A')
+    await page.keyboard.type('Language Test')
+
     await page.locator('.cm-content').fill('const x: number = 1;', { force: true })
     await testUtils.selectLanguage('typescript')
     await testUtils.waitForSaveIndicator()
   })
 
   test('debounces saves after edits', async ({ page }) => {
-    await page.getByPlaceholder('Snippet title...').fill('Debounce Test')
+    // Use contenteditable for title
+    const titleElement = page.locator('h1').first()
+    await titleElement.click()
+    await page.keyboard.press('Meta+A')
+    await page.keyboard.type('Debounce Test')
+
     await page.locator('.cm-content').fill('initial', { force: true })
     await expect(page.getByText('Saved')).toBeVisible()
 
@@ -35,10 +45,22 @@ test.describe('Code Editor', () => {
   })
 
   test('switches between snippets without leaking content', async ({ page, testUtils }) => {
-    await page.getByPlaceholder('Snippet title...').fill('First')
+    // First snippet
+    const titleElement = page.locator('h1').first()
+    await titleElement.click()
+    await page.keyboard.press('Meta+A')
+    await page.keyboard.type('First')
     await page.locator('.cm-content').fill('first content', { force: true })
+
+    // Create second snippet
     await testUtils.clickNewSnippet()
-    await page.getByPlaceholder('Snippet title...').fill('Second')
+
+    // Use contenteditable for second title
+    const titleElement2 = page.locator('h1').first()
+    await titleElement2.click()
+    await page.keyboard.press('Meta+A')
+    await page.keyboard.type('Second')
+
     await expect(page.locator('.cm-content')).not.toContainText('first content')
   })
 })
