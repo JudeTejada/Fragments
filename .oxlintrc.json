@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/out",
+    "**/build",
+    "**/playwright-report"
+  ],
+  "env": {
+    "es2021": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "overrides": [
+    {
+      "files": ["src/renderer/**/*.{ts,tsx,js,jsx}"],
+      "env": {
+        "browser": true
+      }
+    },
+    {
+      "files": [
+        "src/main/**/*.{ts,tsx,js,jsx}",
+        "src/preload/**/*.{ts,tsx,js,jsx}",
+        "electron.vite.config.ts",
+        "playwright.config.ts",
+        "**/*.config.{ts,js,mjs,cjs}",
+        "scripts/**/*.{ts,js}"
+      ],
+      "env": {
+        "node": true
+      }
+    }
+  ]
+}
