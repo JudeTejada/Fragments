@@ -25,11 +25,17 @@ test.describe('Snippet Management', () => {
 
   test('deletes a snippet', async ({ page, testUtils }) => {
     await testUtils.deleteSnippet()
-    await expect(page.getByText('No snippet selected')).toBeVisible()
+    await expect(page.getByText('Select a snippet')).toBeVisible()
   })
 
   test('edits title and notes and saves', async ({ page }) => {
-    await page.getByPlaceholder('Snippet title...').fill('Updated Title')
+    // Edit title using contenteditable
+    const titleElement = page.locator('h1').first()
+    await titleElement.click()
+    await page.keyboard.press('Meta+A')
+    await page.keyboard.type('Updated Title')
+
+    // Edit notes
     await page.getByPlaceholder('Add notes about this snippet...').fill('Some notes')
     await expect(page.getByText('Saved')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Updated Title' })).toBeVisible()

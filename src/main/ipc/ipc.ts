@@ -11,8 +11,11 @@ import type {
   UpdateSnippetPayload,
   SearchParams,
   Settings,
-  AiActionType
+  AiActionType,
+  CreateFragmentPayload,
+  UpdateFragmentPayload
 } from '../../shared/types'
+import { FragmentRepository } from '../repositories/fragmentRepository'
 import { AiService } from '../services/aiService'
 import { getEffectiveSettings } from '../settingsService'
 import { registerQuickCaptureShortcut } from '../quickCapture'
@@ -323,6 +326,68 @@ export function registerIPCHandlers(): void {
       return { success: false, error: String(error) }
     }
   })
+
+  // ========================================
+  // Fragment Handlers
+  // ========================================
+
+  /**
+   * Create a new fragment
+   */
+  ipcMain.handle(IPC_CHANNELS.FRAGMENTS_CREATE, (_event, args: CreateFragmentPayload) => {
+    try {
+      const fragment = FragmentRepository.create(args)
+      return { success: true, data: fragment }
+    } catch (error) {
+      console.error('Error creating fragment:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  /**
+   * Update an existing fragment
+   */
+  ipcMain.handle(IPC_CHANNELS.FRAGMENTS_UPDATE, (_event, args: UpdateFragmentPayload) => {
+    try {
+      const fragment = FragmentRepository.update(args.id, args)
+      if (!fragment) {
+        return { success: false, error: 'Fragment not found' }
+      }
+      return { success: true, data: fragment }
+    } catch (error) {
+      console.error('Error updating fragment:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  /**
+   * Delete a fragment
+   */
+  ipcMain.handle(IPC_CHANNELS.FRAGMENTS_DELETE, (_event, args: { id: string }) => {
+    try {
+      const deleted = FragmentRepository.delete(args.id)
+      return { success: true, data: deleted }
+    } catch (error) {
+      console.error('Error deleting fragment:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  /**
+   * Reorder fragments within a snippet
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.FRAGMENTS_REORDER,
+    (_event, args: { snippetId: string; fragmentIds: string[] }) => {
+      try {
+        FragmentRepository.reorder(args.snippetId, args.fragmentIds)
+        return { success: true, data: true }
+      } catch (error) {
+        console.error('Error reordering fragments:', error)
+        return { success: false, error: String(error) }
+      }
+    }
+  )
 
   // ========================================
   // Backup & System Handlers
