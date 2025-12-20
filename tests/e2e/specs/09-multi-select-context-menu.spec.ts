@@ -93,7 +93,7 @@ test.describe('Multi-Select & Context Menu', () => {
     await testUtils.rightClickSnippet('Snippet B')
 
     // Snippet B should now be selected (visible in detail view)
-    await expect(page.locator('h1').first()).toContainText('Snippet B')
+    await expect(page.locator('h1 input').first()).toHaveValue('Snippet B')
   })
 
   test('escape clears multi-selection', async ({ page, testUtils }) => {

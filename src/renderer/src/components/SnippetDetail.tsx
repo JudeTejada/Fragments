@@ -44,7 +44,7 @@ const ACTION_LABELS: Record<AiActionType, string> = {
   usage_example: 'Usage example'
 }
 
-// ContentEditable title component
+// ContentEditable title component - uses input element for stability
 function EditableTitle({
   value,
   onChange,
@@ -54,7 +54,7 @@ function EditableTitle({
   onChange: (value: string) => void
   className?: string
 }) {
-  const spanRef = React.useRef<HTMLSpanElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = React.useState(false)
 
   const handleBlur = () => {
@@ -64,31 +64,30 @@ function EditableTitle({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      spanRef.current?.blur()
+      inputRef.current?.blur()
     }
   }
 
-  const handleInput = () => {
-    if (spanRef.current) {
-      onChange(spanRef.current.textContent || '')
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value)
   }
 
   return (
-    <span
-      ref={spanRef}
-      contentEditable
-      suppressContentEditableWarning
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={handleChange}
       onFocus={() => setIsEditing(true)}
       onBlur={handleBlur}
-      onInput={handleInput}
       onKeyDown={handleKeyDown}
       className={cn(
-        'outline-none transition-colors duration-200',
+        'bg-transparent border-none outline-none transition-colors duration-200 w-full',
+        'placeholder:text-muted-foreground/50',
         isEditing && 'bg-muted/30',
         className
       )}
-      dangerouslySetInnerHTML={{ __html: value }}
+      placeholder="Snippet title..."
     />
   )
 }
@@ -167,16 +166,20 @@ export function SnippetDetail() {
   // Auto-save effect for title and notes
   React.useEffect(() => {
     if (!selectedSnippet) return
-    if (skipAutoSaveRef.current) {
-      skipAutoSaveRef.current = false
-      return
-    }
     const isDebounceStale = debouncedTitle !== title || debouncedNotes !== notes
     if (isDebounceStale) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
       debouncedNotes !== (selectedSnippet.notes ?? '')
+
+    if (skipAutoSaveRef.current) {
+      if (!hasChanges) {
+        skipAutoSaveRef.current = false
+        return
+      }
+      skipAutoSaveRef.current = false
+    }
 
     if (hasChanges) {
       updateSnippet({
@@ -205,10 +208,18 @@ export function SnippetDetail() {
 
   React.useEffect(() => {
     if (!activeFragment || !selectedSnippet) return
-    if (skipAutoSaveRef.current) return
 
     // Check if content has actually changed from the fragment's stored content
-    if (debouncedFragmentContent !== activeFragment.content) {
+    const hasContentChanges = debouncedFragmentContent !== activeFragment.content
+    if (skipAutoSaveRef.current) {
+      if (!hasContentChanges) {
+        skipAutoSaveRef.current = false
+        return
+      }
+      skipAutoSaveRef.current = false
+    }
+
+    if (hasContentChanges) {
       window.api.fragments.update({
         id: activeFragment.id,
         content: debouncedFragmentContent
@@ -367,11 +378,8 @@ export function SnippetDetail() {
               <h1
                 className={cn(
                   'text-3xl font-medium text-foreground min-h-[2.5rem] py-1',
-                  'outline-none transition-colors duration-200',
-                  'hover:bg-muted/20 rounded-md -mx-2 px-2',
-                  !title && 'before:content-[attr(data-placeholder)] before:text-muted-foreground/50 before:pointer-events-none'
+                  'hover:bg-muted/20 rounded-md -mx-2 px-2'
                 )}
-                data-placeholder="Snippet title..."
               >
                 <EditableTitle
                   value={title}

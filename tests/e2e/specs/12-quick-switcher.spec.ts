@@ -27,8 +27,7 @@ test.describe('Quick Switcher', () => {
       await page.keyboard.press('Meta+K')
       const searchInput = page.getByPlaceholder('Search snippets...')
       await expect(searchInput).toBeVisible({ timeout: 5000 })
-      // Click backdrop to close - use keyboard to toggle since it's simpler
-      await page.keyboard.press('Meta+K')
+      await page.mouse.click(5, 5)
       await expect(searchInput).toBeHidden({ timeout: 5000 })
     })
   })
@@ -48,42 +47,46 @@ test.describe('Quick Switcher', () => {
     test('searches and displays matching snippets', async ({ page }) => {
       await page.keyboard.press('Meta+K')
       const searchInput = page.getByPlaceholder('Search snippets...')
+      const dialog = page.getByRole('dialog')
       await expect(searchInput).toBeVisible({ timeout: 5000 })
       await searchInput.fill('React')
       await page.waitForTimeout(200)
-      await expect(page.getByText('React Hook').first()).toBeVisible()
+      await expect(dialog.getByText('React Hook').first()).toBeVisible()
     })
 
     test('fuzzy matches on content', async ({ page }) => {
       await page.keyboard.press('Meta+K')
       const searchInput = page.getByPlaceholder('Search snippets...')
+      const dialog = page.getByRole('dialog')
       await expect(searchInput).toBeVisible({ timeout: 5000 })
       await searchInput.fill('special')
       await page.waitForTimeout(200)
-      await expect(page.getByText('Unique Content').first()).toBeVisible()
+      await expect(dialog.getByText('Unique Content').first()).toBeVisible()
     })
 
     test('selects snippet with click', async ({ page }) => {
       await page.keyboard.press('Meta+K')
       const searchInput = page.getByPlaceholder('Search snippets...')
+      const dialog = page.getByRole('dialog')
       await expect(searchInput).toBeVisible({ timeout: 5000 })
       await searchInput.fill('React')
       await page.waitForTimeout(300)
       // Click on the result item instead of pressing Enter
-      await page.getByText('React Hook').first().click()
+      await dialog.getByText('React Hook').first().click()
       // Dialog should close and snippet should be selected
       await expect(searchInput).toBeHidden({ timeout: 5000 })
-      // Check contenteditable contains the text
-      await expect(page.locator('h1').first()).toContainText('React Hook')
+      // Check input contains the text
+      await expect(page.locator('h1 input').first()).toHaveValue('React Hook')
     })
 
     test('shows empty state when no results', async ({ page }) => {
       await page.keyboard.press('Meta+K')
       const searchInput = page.getByPlaceholder('Search snippets...')
+      const dialog = page.getByRole('dialog')
       await expect(searchInput).toBeVisible({ timeout: 5000 })
       await searchInput.fill('nonexistent snippet xyz')
       await page.waitForTimeout(200)
-      await expect(page.getByText('No snippets found')).toBeVisible()
+      await expect(dialog.getByText('No snippets found')).toBeVisible()
     })
   })
 })

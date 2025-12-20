@@ -7,7 +7,7 @@ import { json } from '@codemirror/lang-json'
 import { markdown } from '@codemirror/lang-markdown'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
-import { EditorView } from '@codemirror/view'
+import { EditorView, keymap } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 import * as React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -173,6 +173,18 @@ const cursorTheme = EditorView.theme({
   }
 })
 
+const quickSwitcherKeymap = keymap.of([
+  {
+    key: 'Mod-k',
+    run: () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('quick-switcher:open'))
+      }
+      return true
+    }
+  }
+])
+
 type CopyState = 'idle' | 'copying' | 'copied'
 
 interface CodeEditorProps {
@@ -220,7 +232,12 @@ export function CodeEditor({
 
   const extensions = React.useMemo(() => {
     const highlightStyle = isDarkMode ? cursorDarkHighlightStyle : cursorLightHighlightStyle
-    const exts = [cursorTheme, syntaxHighlighting(highlightStyle), EditorView.lineWrapping]
+    const exts = [
+      cursorTheme,
+      syntaxHighlighting(highlightStyle),
+      EditorView.lineWrapping,
+      quickSwitcherKeymap
+    ]
 
     const langExt = languageExtensions[language]
     if (langExt) {

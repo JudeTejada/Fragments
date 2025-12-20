@@ -6,9 +6,12 @@ test.describe('AI Integration', () => {
   })
 
   test('shows AI assistant section and disabled state', async ({ page }) => {
-    await expect(page.getByText('AI assistant')).toBeVisible()
-    await expect(page.getByText('Runs locally via Ollama; no cloud calls.')).toBeVisible()
-    await expect(page.getByText('AI disabled')).toBeVisible()
+    const aiToggle = page.getByRole('button', { name: 'AI Assistant' })
+    await expect(aiToggle).toBeVisible()
+    await aiToggle.click()
+    await expect(
+      page.getByText('Enable AI in Settings to use your local Ollama model.')
+    ).toBeVisible()
     await expect(page.getByRole('button', { name: 'Explain' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Add comments' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Usage example' })).toBeDisabled()

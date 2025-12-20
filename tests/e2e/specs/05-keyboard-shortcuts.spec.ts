@@ -3,8 +3,8 @@ import { test, expect } from '../utils/base-test'
 test.describe('Keyboard Shortcuts', () => {
   test('creates snippet with Meta+N', async ({ page }) => {
     await page.keyboard.press('Meta+N')
-    // Check for contenteditable title element
-    await expect(page.locator('h1').first()).toBeVisible()
+    // Check for title input element
+    await expect(page.locator('h1 input').first()).toBeVisible()
   })
 
   test('opens quick switcher with Meta+K', async ({ page }) => {

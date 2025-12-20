@@ -11,7 +11,6 @@ import { QuickCaptureModal } from '@/components/QuickCaptureModal'
 import { QuickSwitcher } from '@/components/QuickSwitcher'
 import { ToastProvider, toastManager } from '@/components/ui/toast'
 
-// Inner component that has access to context
 function AppContent() {
   const createSnippet = useSnippetActions((actions) => actions.createSnippet)
   const showTrash = useSnippetState((state) => state.showTrash)
@@ -25,6 +24,8 @@ function AppContent() {
     content: ''
   })
   const [quickSwitcherOpen, setQuickSwitcherOpen] = React.useState(false)
+  const quickSwitcherOpenRef = React.useRef(quickSwitcherOpen)
+  quickSwitcherOpenRef.current = quickSwitcherOpen
 
   const handleBackToSnippets = () => {
     setShowTrash(false)
@@ -41,6 +42,40 @@ function AppContent() {
     description: 'Open quick switcher',
     enableOnFormTags: true
   })
+
+  React.useEffect(() => {
+    const handleGlobalKeydown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+      if ((event.metaKey || event.ctrlKey) && (event.code === 'KeyK' || key === 'k')) {
+        event.preventDefault()
+        setQuickSwitcherOpen(true)
+        return
+      }
+
+      if (
+        quickSwitcherOpenRef.current &&
+        (event.key === 'Escape' || event.code === 'Escape')
+      ) {
+        event.preventDefault()
+        setQuickSwitcherOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeydown, true)
+    document.addEventListener('keydown', handleGlobalKeydown, true)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeydown, true)
+      document.removeEventListener('keydown', handleGlobalKeydown, true)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const handleQuickSwitcherOpen = () => setQuickSwitcherOpen(true)
+    window.addEventListener('quick-switcher:open', handleQuickSwitcherOpen)
+    return () => {
+      window.removeEventListener('quick-switcher:open', handleQuickSwitcherOpen)
+    }
+  }, [])
 
   React.useEffect(() => {
     if (!window.api?.quickCapture) return
