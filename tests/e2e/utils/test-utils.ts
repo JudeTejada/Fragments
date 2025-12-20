@@ -29,20 +29,19 @@ export class TestUtils {
 
   async createSnippet(title: string, content: string, language?: string) {
     await this.clickNewSnippet()
-    // Use contenteditable for title instead of placeholder
-    const titleElement = this.page.locator('h1').first()
-    await titleElement.click()
-    await this.page.keyboard.press('Meta+A')
-    await this.page.keyboard.type(title)
+    // Type into the input inside h1
+    const titleInput = this.page.locator('h1 input').first()
+    await titleInput.focus()
+    await titleInput.fill('')
+    await titleInput.fill(title)
 
     await this.page.locator('.cm-content').fill(content, { force: true })
     if (language && language !== 'plaintext') {
       await this.selectLanguage(language)
     }
     await this.waitForSaveIndicator()
-    await this.page.waitForSelector(`[data-testid="snippet-row"][data-title="${title}"]`, {
-      timeout: 10000
-    })
+    // Wait for snippet row to appear in sidebar with retry
+    await this.waitForSnippetRow(title)
   }
 
   async selectLanguage(language: string) {
@@ -98,13 +97,28 @@ export class TestUtils {
   }
 
   async waitForSnippetDetail() {
-    // Wait for the title to be editable (contenteditable)
-    await this.page.locator('h1').first().waitFor({ state: 'visible' })
+    // Wait for the title input to be visible
+    await this.page.locator('h1 input').first().waitFor({ state: 'visible' })
   }
 
   async waitForSaveIndicator() {
     const saved = this.page.getByText('Saved')
     await saved.waitFor({ state: 'visible', timeout: 10000 })
+  }
+
+  async waitForSnippetRow(title: string, maxRetries = 5) {
+    const selector = `[data-testid="snippet-row"][data-title="${title}"]`
+    for (let i = 0; i < maxRetries; i++) {
+      const row = this.page.locator(selector)
+      const count = await row.count()
+      if (count > 0) {
+        await row.first().waitFor({ state: 'visible', timeout: 2000 })
+        return
+      }
+      await this.page.waitForTimeout(500)
+    }
+    // Final attempt with regular waitForSelector
+    await this.page.locator(selector).first().waitFor({ state: 'visible', timeout: 5000 })
   }
 
   async getSnippetTitles(): Promise<string[]> {

@@ -29,11 +29,9 @@ test.describe('Snippet Management', () => {
   })
 
   test('edits title and notes and saves', async ({ page }) => {
-    // Edit title using contenteditable
-    const titleElement = page.locator('h1').first()
-    await titleElement.click()
-    await page.keyboard.press('Meta+A')
-    await page.keyboard.type('Updated Title')
+    // Edit title using input
+    const titleInput = page.locator('h1 input').first()
+    await titleInput.fill('Updated Title')
 
     // Edit notes
     await page.getByPlaceholder('Add notes about this snippet...').fill('Some notes')

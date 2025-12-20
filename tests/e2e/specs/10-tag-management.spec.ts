@@ -121,7 +121,7 @@ test.describe('Tag Management', () => {
     await testUtils.clickSnippet('Test Snippet')
 
     // Wait for detail view
-    await expect(page.locator('h1').first()).toContainText('Test Snippet')
+    await expect(page.locator('h1 input').first()).toHaveValue('Test Snippet')
 
     // Delete the tag from sidebar
     await page.getByTestId('tag-filter').filter({ hasText: 'snippet-tag' }).click({ button: 'right' })

@@ -51,17 +51,27 @@ interface SnippetItemData {
   tags: { id: string; name: string }[]
 }
 
+type SearchableSnippet = Snippet & { fragmentsText: string }
+
 export function QuickSwitcher({ open, onOpenChange }: QuickSwitcherProps) {
   const snippets = useSnippetState((state) => state.snippets)
   const setSelectedSnippetId = useSnippetActions((actions) => actions.setSelectedSnippetId)
   const [query, setQuery] = React.useState('')
 
+  const searchableSnippets = React.useMemo<SearchableSnippet[]>(() => {
+    return snippets.map((snippet) => ({
+      ...snippet,
+      fragmentsText: snippet.fragments.map((fragment) => fragment.content).join(' ')
+    }))
+  }, [snippets])
+
   // Create Fuse instance for fuzzy search
   const fuse = React.useMemo(() => {
-    return new Fuse(snippets, {
+    return new Fuse(searchableSnippets, {
       keys: [
         { name: 'title', weight: 2 },
         { name: 'content', weight: 1 },
+        { name: 'fragmentsText', weight: 1 },
         { name: 'tags.name', weight: 1.5 },
         { name: 'notes', weight: 0.5 }
       ],
@@ -69,7 +79,7 @@ export function QuickSwitcher({ open, onOpenChange }: QuickSwitcherProps) {
       includeMatches: true,
       ignoreLocation: true
     })
-  }, [snippets])
+  }, [searchableSnippets])
 
   // Get recent snippets
   const recentSnippets = React.useMemo((): SnippetItemData[] => {
@@ -106,6 +116,16 @@ export function QuickSwitcher({ open, onOpenChange }: QuickSwitcherProps) {
     [setSelectedSnippetId, onOpenChange]
   )
 
+  const handleDialogKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onOpenChange(false)
+      }
+    },
+    [onOpenChange]
+  )
+
   // Reset query when dialog closes
   React.useEffect(() => {
     if (!open) {
@@ -121,7 +141,7 @@ export function QuickSwitcher({ open, onOpenChange }: QuickSwitcherProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandDialogPopup>
+      <CommandDialogPopup onKeyDownCapture={handleDialogKeyDown}>
         <Command>
           <CommandInput
             placeholder="Search snippets..."

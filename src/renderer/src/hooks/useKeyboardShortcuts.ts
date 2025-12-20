@@ -22,6 +22,7 @@ export function useKeyboardShortcut(
     {
       description: 'Keyboard shortcut',
       enableOnFormTags: true,
+      enableOnContentEditable: true,
       ...options
     },
     []

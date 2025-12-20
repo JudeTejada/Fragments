@@ -12,11 +12,9 @@ test.describe('Code Editor', () => {
   })
 
   test('changes language and shows save indicator', async ({ page, testUtils }) => {
-    // Use contenteditable for title
-    const titleElement = page.locator('h1').first()
-    await titleElement.click()
-    await page.keyboard.press('Meta+A')
-    await page.keyboard.type('Language Test')
+    // Type into the title input
+    const titleInput = page.locator('h1 input').first()
+    await titleInput.fill('Language Test')
 
     await page.locator('.cm-content').fill('const x: number = 1;', { force: true })
     await testUtils.selectLanguage('typescript')
@@ -24,11 +22,9 @@ test.describe('Code Editor', () => {
   })
 
   test('debounces saves after edits', async ({ page }) => {
-    // Use contenteditable for title
-    const titleElement = page.locator('h1').first()
-    await titleElement.click()
-    await page.keyboard.press('Meta+A')
-    await page.keyboard.type('Debounce Test')
+    // Type into the title input
+    const titleInput = page.locator('h1 input').first()
+    await titleInput.fill('Debounce Test')
 
     await page.locator('.cm-content').fill('initial', { force: true })
     await expect(page.getByText('Saved')).toBeVisible()
@@ -46,20 +42,16 @@ test.describe('Code Editor', () => {
 
   test('switches between snippets without leaking content', async ({ page, testUtils }) => {
     // First snippet
-    const titleElement = page.locator('h1').first()
-    await titleElement.click()
-    await page.keyboard.press('Meta+A')
-    await page.keyboard.type('First')
+    const titleInput = page.locator('h1 input').first()
+    await titleInput.fill('First')
     await page.locator('.cm-content').fill('first content', { force: true })
 
     // Create second snippet
     await testUtils.clickNewSnippet()
 
-    // Use contenteditable for second title
-    const titleElement2 = page.locator('h1').first()
-    await titleElement2.click()
-    await page.keyboard.press('Meta+A')
-    await page.keyboard.type('Second')
+    // Type second title
+    const titleInput2 = page.locator('h1 input').first()
+    await titleInput2.fill('Second')
 
     await expect(page.locator('.cm-content')).not.toContainText('first content')
   })
