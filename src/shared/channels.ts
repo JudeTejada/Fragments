@@ -31,6 +31,12 @@ export const IPC_CHANNELS = {
   AI_LIST_FOR_SNIPPET: 'ai:listForSnippet',
   AI_TEST_CONNECTION: 'ai:testConnection',
 
+  // Fragments
+  FRAGMENTS_CREATE: 'fragments:create',
+  FRAGMENTS_UPDATE: 'fragments:update',
+  FRAGMENTS_DELETE: 'fragments:delete',
+  FRAGMENTS_REORDER: 'fragments:reorder',
+
   // Backup & System
   BACKUP_EXPORT: 'backup:export',
   DB_PATH: 'db:path'
