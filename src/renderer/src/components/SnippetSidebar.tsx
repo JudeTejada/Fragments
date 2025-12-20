@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useForm } from '@tanstack/react-form'
 import {
   Sidebar,
   SidebarContent,
@@ -48,14 +49,34 @@ export function SnippetSidebar() {
   const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
   const fetchTrashItems = useSnippetActions((actions) => actions.fetchTrashItems)
 
-  // State for adding new tag
-  const [newTagName, setNewTagName] = React.useState('')
+  // UI state for popovers (not form state)
   const [isAddTagOpen, setIsAddTagOpen] = React.useState(false)
-
-  // State for editing tag
-  const [editTagName, setEditTagName] = React.useState('')
   const [editingTagId, setEditingTagId] = React.useState<string | null>(null)
   const [isEditPopoverOpen, setIsEditPopoverOpen] = React.useState(false)
+
+  // Form state using TanStack Form
+  const addTagForm = useForm({
+    defaultValues: { name: '' },
+    onSubmit: async ({ value }) => {
+      if (value.name.trim()) {
+        await createTag(value.name.trim())
+        addTagForm.reset()
+        setIsAddTagOpen(false)
+      }
+    },
+  })
+
+  const editTagForm = useForm({
+    defaultValues: { name: '' },
+    onSubmit: async ({ value }) => {
+      if (editingTagId && value.name.trim()) {
+        await updateTag(editingTagId, value.name.trim())
+        setEditingTagId(null)
+        editTagForm.reset()
+        setIsEditPopoverOpen(false)
+      }
+    },
+  })
 
   // State for delete confirmation
   const [deletingTagId, setDeletingTagId] = React.useState<string | null>(null)
@@ -102,24 +123,11 @@ export function SnippetSidebar() {
     fetchTrashItems()
   }, [fetchTrashItems])
 
-  // Handle create tag
-  const handleCreateTag = async () => {
-    if (newTagName.trim()) {
-      await createTag(newTagName.trim())
-      setNewTagName('')
-      setIsAddTagOpen(false)
-    }
-  }
+  // Handle create tag - just delegates to form submit
+  const handleCreateTag = () => addTagForm.handleSubmit()
 
-  // Handle edit tag
-  const handleEditTag = async () => {
-    if (editingTagId && editTagName.trim()) {
-      await updateTag(editingTagId, editTagName.trim())
-      setEditingTagId(null)
-      setEditTagName('')
-      setIsEditPopoverOpen(false)
-    }
-  }
+  // Handle edit tag - just delegates to form submit
+  const handleEditTag = () => editTagForm.handleSubmit()
 
   // Handle delete tag
   const handleDeleteTag = async () => {
@@ -141,7 +149,7 @@ export function SnippetSidebar() {
       const tag = tags.find((t) => t.id === tagContextMenu.targetId)
       if (tag) {
         setEditingTagId(tag.id)
-        setEditTagName(tag.name)
+        editTagForm.setFieldValue('name', tag.name)
         setIsEditPopoverOpen(true)
       }
     }
@@ -297,17 +305,23 @@ export function SnippetSidebar() {
               <PopoverPopup className="w-64" side="right" align="start">
                 <div className="space-y-3">
                   <h4 className="font-medium text-sm">Add New Tag</h4>
-                  <Input
-                    data-testid="new-tag-input"
-                    placeholder="Tag name..."
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleCreateTag()
-                      }
-                    }}
+                  <addTagForm.Field
+                    name="name"
+                    children={(field) => (
+                      <Input
+                        data-testid="new-tag-input"
+                        placeholder="Tag name..."
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleCreateTag()
+                          }
+                        }}
+                      />
+                    )}
                   />
                   <div className="flex justify-end gap-2">
                     <PopoverClose
@@ -317,14 +331,19 @@ export function SnippetSidebar() {
                         </Button>
                       }
                     />
-                    <Button
-                      size="sm"
-                      onClick={handleCreateTag}
-                      disabled={!newTagName.trim()}
-                      data-testid="confirm-add-tag"
-                    >
-                      Add
-                    </Button>
+                    <addTagForm.Subscribe
+                      selector={(state) => state.values.name.trim()}
+                      children={(name) => (
+                        <Button
+                          size="sm"
+                          onClick={handleCreateTag}
+                          disabled={!name}
+                          data-testid="confirm-add-tag"
+                        >
+                          Add
+                        </Button>
+                      )}
+                    />
                   </div>
                 </div>
               </PopoverPopup>
@@ -391,18 +410,24 @@ export function SnippetSidebar() {
         <PopoverPopup className="w-64">
           <div className="space-y-3">
             <h4 className="font-medium text-sm">Edit Tag</h4>
-            <Input
-              data-testid="edit-tag-input"
-              placeholder="Tag name..."
-              value={editTagName}
-              onChange={(e) => setEditTagName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleEditTag()
-                }
-              }}
-              autoFocus
+            <editTagForm.Field
+              name="name"
+              children={(field) => (
+                <Input
+                  data-testid="edit-tag-input"
+                  placeholder="Tag name..."
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleEditTag()
+                    }
+                  }}
+                  autoFocus
+                />
+              )}
             />
             <div className="flex justify-end gap-2">
               <Button
@@ -411,18 +436,24 @@ export function SnippetSidebar() {
                 onClick={() => {
                   setIsEditPopoverOpen(false)
                   setEditingTagId(null)
+                  editTagForm.reset()
                 }}
               >
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={handleEditTag}
-                disabled={!editTagName.trim()}
-                data-testid="confirm-edit-tag"
-              >
-                Save
-              </Button>
+              <editTagForm.Subscribe
+                selector={(state) => state.values.name.trim()}
+                children={(name) => (
+                  <Button
+                    size="sm"
+                    onClick={handleEditTag}
+                    disabled={!name}
+                    data-testid="confirm-edit-tag"
+                  >
+                    Save
+                  </Button>
+                )}
+              />
             </div>
           </div>
         </PopoverPopup>

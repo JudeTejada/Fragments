@@ -16,8 +16,9 @@ export class TestUtils {
 
   async waitForAppLoad() {
     await this.page.waitForLoadState('domcontentloaded')
-    await this.page.getByText('Snippets', { exact: false }).first().waitFor()
-    await this.page.getByTestId('filter-all').waitFor({ state: 'visible' })
+    // Wait for the sidebar to be visible with the filter buttons
+    await this.page.getByTestId('filter-all').waitFor({ state: 'visible', timeout: 15000 })
+    await this.page.getByTestId('filter-favorites').waitFor({ state: 'visible' })
   }
 
   async clickNewSnippet() {
@@ -28,7 +29,12 @@ export class TestUtils {
 
   async createSnippet(title: string, content: string, language?: string) {
     await this.clickNewSnippet()
-    await this.page.getByPlaceholder('Snippet title...').fill(title)
+    // Use contenteditable for title instead of placeholder
+    const titleElement = this.page.locator('h1').first()
+    await titleElement.click()
+    await this.page.keyboard.press('Meta+A')
+    await this.page.keyboard.type(title)
+
     await this.page.locator('.cm-content').fill(content, { force: true })
     if (language && language !== 'plaintext') {
       await this.selectLanguage(language)
@@ -41,12 +47,13 @@ export class TestUtils {
 
   async selectLanguage(language: string) {
     const label = LANGUAGE_LABELS[language] ?? language
-    const trigger = this.page.locator('[data-slot="select-trigger"]').first()
-    await trigger.click()
-    const option = this.page.locator('[data-slot="select-item"]', { hasText: label }).first()
-    await option.waitFor({ state: 'visible' })
-    await option.click({ force: true })
-    await this.page.keyboard.press('Escape')
+    // Click the language selector button in the editor header
+    const langButton = this.page.getByRole('button', { name: /plain text|javascript|typescript|python|html|css|markdown|json/i }).first()
+    await langButton.click()
+    await this.page.waitForTimeout(200)
+    // Select from the dropdown
+    await this.page.getByRole('button', { name: label }).click()
+    await this.page.waitForTimeout(200)
   }
 
   async deleteSnippet() {
@@ -91,7 +98,8 @@ export class TestUtils {
   }
 
   async waitForSnippetDetail() {
-    await this.page.getByPlaceholder('Snippet title...').waitFor({ state: 'visible' })
+    // Wait for the title to be editable (contenteditable)
+    await this.page.locator('h1').first().waitFor({ state: 'visible' })
   }
 
   async waitForSaveIndicator() {

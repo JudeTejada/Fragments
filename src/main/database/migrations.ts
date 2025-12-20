@@ -86,5 +86,45 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_snippets_deleted_at ON snippets(deleted_at);
       UPDATE snippets SET deleted_at = NULL WHERE deleted_at IS NULL;
     `
+  },
+
+  // Version 5: Fragment support - multiple code blocks per snippet
+  {
+    version: 5,
+    up: `
+      -- Fragments table
+      CREATE TABLE IF NOT EXISTS fragments (
+        id TEXT PRIMARY KEY,
+        snippet_id TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT 'main',
+        language TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (snippet_id) REFERENCES snippets(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_fragments_snippet_id ON fragments(snippet_id);
+      CREATE INDEX IF NOT EXISTS idx_fragments_sort_order ON fragments(snippet_id, sort_order);
+
+      -- Migrate existing snippet content to fragments table
+      INSERT INTO fragments (id, snippet_id, name, language, content, sort_order, created_at, updated_at)
+      SELECT
+        lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' ||
+        substr(lower(hex(randomblob(2))),2) || '-' ||
+        substr('89ab', abs(random()) % 4 + 1, 1) ||
+        substr(lower(hex(randomblob(2))),2) || '-' ||
+        lower(hex(randomblob(6))),
+        id,
+        'main',
+        language,
+        content,
+        0,
+        created_at,
+        updated_at
+      FROM snippets
+      WHERE id NOT IN (SELECT DISTINCT snippet_id FROM fragments);
+    `
   }
 ]

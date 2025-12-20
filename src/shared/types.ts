@@ -12,6 +12,17 @@ export interface AiRun {
   createdAt: string
 }
 
+export interface Fragment {
+  id: string
+  snippetId: string
+  name: string
+  language: string
+  content: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Snippet {
   id: string
   title: string
@@ -23,6 +34,7 @@ export interface Snippet {
   updatedAt: string
   deletedAt: string | null
   tags: Tag[]
+  fragments: Fragment[]
 }
 
 export interface Tag {
@@ -63,6 +75,22 @@ export interface UpdateSnippetPayload {
   notes?: string
   isFavorite?: boolean
   tags?: string[]
+}
+
+// Fragment payload types
+export interface CreateFragmentPayload {
+  snippetId: string
+  name?: string
+  language: string
+  content?: string
+}
+
+export interface UpdateFragmentPayload {
+  id: string
+  name?: string
+  language?: string
+  content?: string
+  sortOrder?: number
 }
 
 export interface SearchParams {

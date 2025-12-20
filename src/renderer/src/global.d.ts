@@ -7,7 +7,10 @@ import type {
   Snippet,
   Tag,
   TrashedSnippet,
-  UpdateSnippetPayload
+  UpdateSnippetPayload,
+  Fragment,
+  CreateFragmentPayload,
+  UpdateFragmentPayload
 } from '@shared/types'
 
 type IPCResponse<T> = {
@@ -60,6 +63,12 @@ declare global {
         run: (data: { snippetId: string; type: AiActionType }) => Promise<IPCResponse<AiRun>>
         listForSnippet: (snippetId: string) => Promise<IPCResponse<AiRun[]>>
         testConnection: () => Promise<IPCResponse<{ ok: boolean; message?: string; models?: string[] }>>
+      }
+      fragments: {
+        create: (data: CreateFragmentPayload) => Promise<IPCResponse<Fragment>>
+        update: (data: UpdateFragmentPayload) => Promise<IPCResponse<Fragment>>
+        delete: (id: string) => Promise<IPCResponse<boolean>>
+        reorder: (snippetId: string, fragmentIds: string[]) => Promise<IPCResponse<boolean>>
       }
     }
   }

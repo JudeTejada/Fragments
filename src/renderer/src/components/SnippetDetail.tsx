@@ -1,42 +1,30 @@
 import * as React from 'react'
 import { useSelectedSnippet, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
 import { CodeEditor } from '@/components/CodeEditor'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardPanel } from '@/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxPopup,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxGroup,
-  ComboboxGroupLabel,
-  ComboboxSeparator
-} from '@/components/ui/combobox'
+import { cn } from '@/lib/utils'
+import { AiActionType } from '@shared/types'
+import { useAiForSnippet } from '@/hooks/useAiForSnippet'
+import { FragmentTabs } from '@/components/FragmentTabs'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Code2,
   Trash2,
   Check,
   X,
-  Plus,
   Loader2,
   Sparkles,
   MessageSquareText,
   PencilLine,
   BookOpen,
   Star,
-  Hash,
-  Tag
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { AiActionType, SUPPORTED_LANGUAGES } from '@shared/types'
-import { useAiForSnippet } from '@/hooks/useAiForSnippet'
 
 // Auto-save debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -56,6 +44,55 @@ const ACTION_LABELS: Record<AiActionType, string> = {
   usage_example: 'Usage example'
 }
 
+// ContentEditable title component
+function EditableTitle({
+  value,
+  onChange,
+  className
+}: {
+  value: string
+  onChange: (value: string) => void
+  className?: string
+}) {
+  const spanRef = React.useRef<HTMLSpanElement>(null)
+  const [isEditing, setIsEditing] = React.useState(false)
+
+  const handleBlur = () => {
+    setIsEditing(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      spanRef.current?.blur()
+    }
+  }
+
+  const handleInput = () => {
+    if (spanRef.current) {
+      onChange(spanRef.current.textContent || '')
+    }
+  }
+
+  return (
+    <span
+      ref={spanRef}
+      contentEditable
+      suppressContentEditableWarning
+      onFocus={() => setIsEditing(true)}
+      onBlur={handleBlur}
+      onInput={handleInput}
+      onKeyDown={handleKeyDown}
+      className={cn(
+        'outline-none transition-colors duration-200',
+        isEditing && 'bg-muted/30',
+        className
+      )}
+      dangerouslySetInnerHTML={{ __html: value }}
+    />
+  )
+}
+
 export function SnippetDetail() {
   const selectedSnippet = useSelectedSnippet()
   const isSaving = useSnippetState((state) => state.isSaving)
@@ -63,15 +100,22 @@ export function SnippetDetail() {
   const updateSnippet = useSnippetActions((actions) => actions.updateSnippet)
   const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
   const toggleFavorite = useSnippetActions((actions) => actions.toggleFavorite)
+  const refreshData = useSnippetActions((actions) => actions.refreshData)
 
   // Local state for editing
   const [title, setTitle] = React.useState('')
-  const [content, setContent] = React.useState('')
   const [notes, setNotes] = React.useState('')
-  const [language, setLanguage] = React.useState('plaintext')
   const [tagInput, setTagInput] = React.useState('')
   const [showSaved, setShowSaved] = React.useState(false)
   const skipAutoSaveRef = React.useRef(false)
+
+  // Fragment-specific state
+  const [activeFragmentId, setActiveFragmentId] = React.useState<string | null>(null)
+  const [fragmentContents, setFragmentContents] = React.useState<Record<string, string>>({})
+
+  // UI state
+  const [notesExpanded, setNotesExpanded] = React.useState(true)
+  const [aiExpanded, setAiExpanded] = React.useState(false)
 
   const {
     aiRuns,
@@ -82,43 +126,62 @@ export function SnippetDetail() {
     run: runAiAction
   } = useAiForSnippet(selectedSnippet?.id ?? null)
 
+  // Get current active fragment
+  const activeFragment = React.useMemo(() => {
+    if (!selectedSnippet?.fragments) return undefined
+    return selectedSnippet.fragments.find((f) => f.id === activeFragmentId) ?? selectedSnippet.fragments[0]
+  }, [selectedSnippet?.fragments, activeFragmentId])
+
+  // Get current fragment content (from local state or fragment data)
+  const currentFragmentContent = activeFragment
+    ? fragmentContents[activeFragment.id] ?? activeFragment.content
+    : ''
+
   // Sync local state when selected snippet changes
   React.useEffect(() => {
     if (selectedSnippet) {
       skipAutoSaveRef.current = true
       setTitle(selectedSnippet.title)
-      setContent(selectedSnippet.content)
       setNotes(selectedSnippet.notes ?? '')
-      setLanguage(selectedSnippet.language)
+
+      // Initialize fragment state
+      if (selectedSnippet.fragments?.length > 0) {
+        setActiveFragmentId(selectedSnippet.fragments[0].id)
+        // Initialize fragment contents from snippet data
+        const contents: Record<string, string> = {}
+        selectedSnippet.fragments.forEach((f) => {
+          contents[f.id] = f.content
+        })
+        setFragmentContents(contents)
+      } else {
+        setActiveFragmentId(null)
+        setFragmentContents({})
+      }
     }
   }, [selectedSnippet?.id])
 
-  // Debounced values for auto-save
+  // Debounced values for auto-save (title and notes only, fragment content saved separately)
   const debouncedTitle = useDebounce(title, 500)
-  const debouncedContent = useDebounce(content, 500)
   const debouncedNotes = useDebounce(notes, 500)
 
-  // Auto-save effect
+  // Auto-save effect for title and notes
   React.useEffect(() => {
     if (!selectedSnippet) return
     if (skipAutoSaveRef.current) {
       skipAutoSaveRef.current = false
       return
     }
-    const isDebounceStale =
-      debouncedTitle !== title || debouncedContent !== content || debouncedNotes !== notes
+    const isDebounceStale = debouncedTitle !== title || debouncedNotes !== notes
     if (isDebounceStale) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
-      debouncedContent !== selectedSnippet.content ||
       debouncedNotes !== (selectedSnippet.notes ?? '')
 
     if (hasChanges) {
       updateSnippet({
         id: selectedSnippet.id,
         title: debouncedTitle,
-        content: debouncedContent,
         notes: debouncedNotes || null
       })
 
@@ -130,21 +193,100 @@ export function SnippetDetail() {
     return undefined
   }, [
     debouncedTitle,
-    debouncedContent,
     debouncedNotes,
     selectedSnippet,
     title,
-    content,
     notes,
     updateSnippet
   ])
 
-  // Handle language change (immediate save)
-  const handleLanguageChange = (value: string | null) => {
-    if (!value) return
-    setLanguage(value)
-    if (selectedSnippet) {
-      updateSnippet({ id: selectedSnippet.id, language: value })
+  // Fragment content change handler (with debounced save)
+  const debouncedFragmentContent = useDebounce(currentFragmentContent, 500)
+
+  React.useEffect(() => {
+    if (!activeFragment || !selectedSnippet) return
+    if (skipAutoSaveRef.current) return
+
+    // Check if content has actually changed from the fragment's stored content
+    if (debouncedFragmentContent !== activeFragment.content) {
+      window.api.fragments.update({
+        id: activeFragment.id,
+        content: debouncedFragmentContent
+      }).then((result) => {
+        if (result.success) {
+          refreshData() // Refresh snippet data to sync state
+          setShowSaved(true)
+          setTimeout(() => setShowSaved(false), 2000)
+        }
+      })
+    }
+  }, [debouncedFragmentContent, activeFragment?.id, activeFragment?.content, selectedSnippet, refreshData])
+
+  // Handle fragment content change (local state update)
+  const handleFragmentContentChange = (content: string) => {
+    if (!activeFragment) return
+    setFragmentContents((prev) => ({
+      ...prev,
+      [activeFragment.id]: content
+    }))
+  }
+
+  // Handle fragment language change (immediate save)
+  const handleFragmentLanguageChange = (fragmentId: string, language: string) => {
+    if (!selectedSnippet) return
+    window.api.fragments.update({ id: fragmentId, language }).then((result) => {
+      if (result.success) {
+        refreshData()
+      }
+    })
+  }
+
+  // Listen for language change events from CodeEditor
+  React.useEffect(() => {
+    const handleLanguageChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (activeFragment && detail?.language) {
+        handleFragmentLanguageChange(activeFragment.id, detail.language)
+      }
+    }
+
+    window.addEventListener('snippet:change-language', handleLanguageChange)
+    return () => window.removeEventListener('snippet:change-language', handleLanguageChange)
+  }, [activeFragment])
+
+  // Handle add new fragment
+  const handleAddFragment = async () => {
+    if (!selectedSnippet) return
+    const result = await window.api.fragments.create({
+      snippetId: selectedSnippet.id,
+      language: 'plaintext'
+    })
+    if (result.success && result.data) {
+      await refreshData()
+      setActiveFragmentId(result.data.id)
+    }
+  }
+
+  // Handle delete fragment
+  const handleDeleteFragment = async (fragmentId: string) => {
+    const result = await window.api.fragments.delete(fragmentId)
+    if (result.success) {
+      await refreshData()
+      // If we deleted the active fragment, switch to the first one
+      if (fragmentId === activeFragmentId && selectedSnippet?.fragments) {
+        const remaining = selectedSnippet.fragments.filter((f) => f.id !== fragmentId)
+        if (remaining.length > 0) {
+          setActiveFragmentId(remaining[0].id)
+        }
+      }
+    }
+  }
+
+  // Handle rename fragment
+  const handleRenameFragment = async (fragmentId: string, newName: string) => {
+    const result = await window.api.fragments.update({ id: fragmentId, name: newName })
+    if (result.success) {
+      await refreshData()
     }
   }
 
@@ -207,8 +349,8 @@ export function SnippetDetail() {
             <EmptyMedia variant="icon">
               <Code2 className="size-4" />
             </EmptyMedia>
-            <EmptyTitle>No snippet selected</EmptyTitle>
-            <EmptyDescription>Select a snippet from the list or create a new one</EmptyDescription>
+            <EmptyTitle>Select a snippet</EmptyTitle>
+            <EmptyDescription>Choose one from the sidebar or press Cmd+N to create</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
@@ -218,54 +360,39 @@ export function SnippetDetail() {
   return (
     <div className="flex flex-1 flex-col bg-background relative">
       <ScrollArea className="flex-1">
-        <div className="mx-auto max-w-4xl p-6 space-y-6">
-          {/* Header */}
-          <div className="space-y-4">
-            {/* Title + Actions */}
+        <div className="mx-auto max-w-4xl p-8 space-y-8">
+          {/* Title - Hero */}
+          <div className="space-y-3">
             <div className="flex items-start justify-between gap-4">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Snippet title..."
-                className="text-xl font-semibold border-none shadow-none px-0 h-auto bg-transparent focus-visible:ring-0"
-                unstyled
-              />
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={selectedSnippet.isFavorite ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className={cn(
-                    'size-8',
-                    selectedSnippet.isFavorite
-                      ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                      : 'text-muted-foreground'
-                  )}
-                  onClick={handleFavoriteToggle}
-                >
-                  <Star
-                    className={cn(
-                      'size-4',
-                      selectedSnippet.isFavorite ? 'fill-amber-400 text-amber-600' : ''
-                    )}
-                  />
-                  <span className="sr-only">
-                    {selectedSnippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                  </span>
-                </Button>
+              <h1
+                className={cn(
+                  'text-3xl font-medium text-foreground min-h-[2.5rem] py-1',
+                  'outline-none transition-colors duration-200',
+                  'hover:bg-muted/20 rounded-md -mx-2 px-2',
+                  !title && 'before:content-[attr(data-placeholder)] before:text-muted-foreground/50 before:pointer-events-none'
+                )}
+                data-placeholder="Snippet title..."
+              >
+                <EditableTitle
+                  value={title}
+                  onChange={setTitle}
+                />
+              </h1>
+              <div className="flex items-center gap-2 pt-1">
                 <span
                   className={cn(
-                    'text-xs text-muted-foreground transition-opacity duration-300 flex items-center',
+                    'text-xs text-muted-foreground transition-all duration-300 flex items-center gap-1.5',
                     isSaving || showSaved ? 'opacity-100' : 'opacity-0'
                   )}
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="size-3 mr-1 animate-spin" />
-                      Saving...
+                      <Loader2 className="size-3 animate-spin" />
+                      Saving
                     </>
                   ) : (
                     <>
-                      <Check className="size-3 mr-1" />
+                      <Check className="size-3" />
                       Saved
                     </>
                   )}
@@ -273,7 +400,28 @@ export function SnippetDetail() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className={cn(
+                    'size-8 rounded-full transition-all',
+                    selectedSnippet.isFavorite
+                      ? 'text-amber-500 bg-amber-50'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  onClick={handleFavoriteToggle}
+                >
+                  <Star
+                    className={cn(
+                      'size-4',
+                      selectedSnippet.isFavorite && 'fill-current'
+                    )}
+                  />
+                  <span className="sr-only">
+                    {selectedSnippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  </span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-destructive"
                   onClick={handleDelete}
                 >
                   <Trash2 className="size-4" />
@@ -281,237 +429,221 @@ export function SnippetDetail() {
                 </Button>
               </div>
             </div>
+          </div>
 
-            {/* Language + Tags */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Select value={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger size="sm" className="w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectPopup>
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectPopup>
-              </Select>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                {selectedSnippet.tags.map((tag) => (
-                  <Badge key={tag.id} variant="secondary" className="gap-1 pr-1 h-6 text-xs">
-                    #{tag.name}
-                    <button
-                      onClick={() => handleRemoveTag(tag.id)}
-                      className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-                      aria-label={`Remove ${tag.name}`}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                ))}
-                <Combobox value={null} onValueChange={handleAddTag}>
-                  <ComboboxInput
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && tagInput.trim()) {
-                        e.preventDefault()
-                        handleAddTag(tagInput.trim())
-                      }
-                    }}
-                    placeholder="+ Tag"
-                    size="sm"
-                    className="h-6 w-16 min-w-[5.5rem] !bg-transparent px-1.5 text-xs shadow-none transition-all focus:w-28 focus:ring-0 placeholder:text-muted-foreground/60"
-                    showTrigger={false}
+          {/* Code Editor - Main Focus */}
+          <div className="space-y-3">
+            <FragmentTabs
+              fragments={selectedSnippet.fragments}
+              activeFragmentId={activeFragmentId}
+              onFragmentChange={setActiveFragmentId}
+              onAddFragment={handleAddFragment}
+              onDeleteFragment={handleDeleteFragment}
+              onRenameFragment={handleRenameFragment}
+            >
+              {(fragment) =>
+                fragment && (
+                  <CodeEditor
+                    value={fragmentContents[fragment.id] ?? fragment.content}
+                    language={fragment.language}
+                    onChange={handleFragmentContentChange}
+                    className="min-h-[350px]"
                   />
-                  <ComboboxPopup className="min-w-auto p-0">
-                    <ComboboxList className="py-1">
-                      {(() => {
-                        const availableTags = tags
-                          .filter((t) => !selectedSnippet.tags.some((st) => st.id === t.id))
-                          .filter(
-                            (t) =>
-                              !tagInput || t.name.toLowerCase().includes(tagInput.toLowerCase())
-                          )
+                )
+              }
+            </FragmentTabs>
+          </div>
 
-                        const canCreateNew =
-                          tagInput.trim() &&
-                          !tags.some((t) => t.name.toLowerCase() === tagInput.trim().toLowerCase())
+          {/* Notes - Collapsible */}
+          <div className="space-y-2">
+            <button
+              onClick={() => setNotesExpanded(!notesExpanded)}
+              className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {notesExpanded ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              Notes
+            </button>
+            <AnimatePresence>
+              {notesExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add notes about this snippet..."
+                    className="min-h-[100px] resize-none bg-muted/10 border-border/30 rounded-xl focus:bg-muted/20 transition-colors"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-                        if (availableTags.length === 0 && !canCreateNew) {
-                          return (
-                            <div className="flex flex-col items-center justify-center py-4 px-2 text-center text-xs text-muted-foreground">
-                              <Tag className="mb-2 size-4 opacity-50" />
-                              <p>No tags found</p>
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <>
-                            {availableTags.length > 0 && (
-                              <ComboboxGroup>
-                                <ComboboxGroupLabel>Available Tags</ComboboxGroupLabel>
-                                {availableTags.map((tag) => (
-                                  <ComboboxItem key={tag.id} value={tag.id} className="text-sm">
-                                    <Hash className="mr-2 size-3 text-muted-foreground/70" />
-                                    <span className="truncate">{tag.name}</span>
-                                    <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums">
-                                      {tag.count}
-                                    </span>
-                                  </ComboboxItem>
-                                ))}
-                              </ComboboxGroup>
-                            )}
-
-                            {canCreateNew && (
-                              <>
-                                {availableTags.length > 0 && <ComboboxSeparator />}
-                                <ComboboxGroup>
-                                  <ComboboxGroupLabel>Create New</ComboboxGroupLabel>
-                                  <ComboboxItem
-                                    value={tagInput.trim()}
-                                    className="text-sm text-primary data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
-                                  >
-                                    <Plus className="mr-2 size-3" />
-                                    <span>
-                                      Create <span className="font-medium">#{tagInput.trim()}</span>
-                                    </span>
-                                  </ComboboxItem>
-                                </ComboboxGroup>
-                              </>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </ComboboxList>
-                  </ComboboxPopup>
-                </Combobox>
+          {/* Tags - Fixed at bottom */}
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedSnippet.tags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="secondary"
+                  className="gap-1.5 pr-2 h-6 text-xs bg-muted/40 hover:bg-muted/60 transition-colors"
+                >
+                  #{tag.name}
+                  <button
+                    onClick={() => handleRemoveTag(tag.id)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                    aria-label={`Remove ${tag.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+              ))}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tagInput.trim()) {
+                      e.preventDefault()
+                      handleAddTag(tagInput.trim())
+                    }
+                  }}
+                  placeholder="+ Tag"
+                  className="h-6 w-16 min-w-[5.5rem] text-xs bg-transparent px-1.5 rounded-md transition-all focus:w-28 focus:outline-none focus:ring-1 focus:ring-ring/20 placeholder:text-muted-foreground/60"
+                />
               </div>
             </div>
           </div>
 
-          {/* Code Editor */}
+          {/* AI Assistant - Collapsible sheet */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Code</label>
-            <CodeEditor
-              value={content}
-              language={language}
-              onChange={setContent}
-              className="min-h-[300px]"
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Notes</label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about this snippet..."
-              className="min-h-[100px] resize-none"
-            />
-          </div>
-
-          {/* AI Assistant */}
-          <Card className="border border-dashed border-muted-foreground/40 bg-muted/30">
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-base">AI assistant</CardTitle>
-                <CardDescription>Runs locally via Ollama; no cloud calls.</CardDescription>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => runAiAction('explain')}
-                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
-                >
-                  {loadingType === 'explain' ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <MessageSquareText className="size-4" />
-                  )}
-                  {loadingType === 'explain' ? 'Explaining...' : 'Explain'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => runAiAction('comment')}
-                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
-                >
-                  {loadingType === 'comment' ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <PencilLine className="size-4" />
-                  )}
-                  {loadingType === 'comment' ? 'Commenting...' : 'Add comments'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => runAiAction('usage_example')}
-                  disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
-                >
-                  {loadingType === 'usage_example' ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <BookOpen className="size-4" />
-                  )}
-                  {loadingType === 'usage_example' ? 'Generating...' : 'Usage example'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardPanel className="space-y-3 pt-0">
-              {!isAiConfigured && (
-                <div className="flex items-start gap-3 rounded-xl border border-dashed border-amber-300/60 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-                  <Sparkles className="mt-0.5 size-4 text-amber-600" />
-                  <div className="space-y-1">
-                    <p className="font-medium">AI disabled</p>
-                    <p className="text-xs text-amber-800/80">
-                      {aiSettingsMessage ?? 'Enable AI in Settings to use your local model.'}
-                    </p>
-                  </div>
-                </div>
+            <button
+              onClick={() => setAiExpanded(!aiExpanded)}
+              className={cn(
+                'flex items-center gap-2 text-xs font-medium transition-colors w-full',
+                aiExpanded ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
-
-              {aiError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {aiError}
-                </div>
+            >
+              <Sparkles className={cn('size-3.5', aiExpanded && 'text-amber-500')} />
+              AI Assistant
+              {aiExpanded ? (
+                <ChevronDown className="size-3.5 ml-auto" />
+              ) : (
+                <ChevronRight className="size-3.5 ml-auto" />
               )}
-
-              <div className="space-y-3 max-h-72 overflow-auto">
-                {aiRuns.map((run) => (
-                  <article
-                    key={run.id}
-                    className="rounded-xl border border-muted-foreground/20 bg-background/60 p-3 shadow-xs"
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge variant="secondary" className="uppercase tracking-wide text-[10px]">
-                        {ACTION_LABELS[run.type]}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(run.createdAt).toLocaleString()}
-                      </span>
+            </button>
+            <AnimatePresence>
+              {aiExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-2 space-y-4">
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-2 h-8"
+                        onClick={() => runAiAction('explain')}
+                        disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                      >
+                        {loadingType === 'explain' ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <MessageSquareText className="size-3.5" />
+                        )}
+                        Explain
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-2 h-8"
+                        onClick={() => runAiAction('comment')}
+                        disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                      >
+                        {loadingType === 'comment' ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <PencilLine className="size-3.5" />
+                        )}
+                        Add comments
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-2 h-8"
+                        onClick={() => runAiAction('usage_example')}
+                        disabled={!selectedSnippet || !isAiConfigured || Boolean(loadingType)}
+                      >
+                        {loadingType === 'usage_example' ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <BookOpen className="size-3.5" />
+                        )}
+                        Usage example
+                      </Button>
                     </div>
-                    <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
-                      {run.result}
-                    </pre>
-                  </article>
-                ))}
-                {aiRuns.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No AI results yet. Run an action above to get started.
-                  </p>
-                )}
-              </div>
-            </CardPanel>
-          </Card>
+
+                    {/* Configuration notice */}
+                    {!isAiConfigured && (
+                      <div className="flex items-start gap-2.5 rounded-lg bg-amber-50/80 px-3 py-2.5 text-xs text-amber-900 border border-amber-200/50">
+                        <Sparkles className="size-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p>
+                          {aiSettingsMessage ?? 'Enable AI in Settings to use your local model.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Error */}
+                    {aiError && (
+                      <div className="rounded-lg bg-destructive/10 px-3 py-2.5 text-xs text-destructive border border-destructive/20">
+                        {aiError}
+                      </div>
+                    )}
+
+                    {/* Results */}
+                    <div className="space-y-3 max-h-64 overflow-auto pr-1">
+                      {aiRuns.map((run) => (
+                        <article
+                          key={run.id}
+                          className="rounded-lg bg-muted/30 px-3 py-2.5 text-xs border border-border/30"
+                        >
+                          <div className="mb-2 flex items-center gap-2">
+                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide h-5">
+                              {ACTION_LABELS[run.type]}
+                            </Badge>
+                            <span className="text-muted-foreground text-[10px]">
+                              {new Date(run.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <pre className="whitespace-pre-wrap font-mono leading-relaxed text-foreground/80">
+                            {run.result}
+                          </pre>
+                        </article>
+                      ))}
+                      {aiRuns.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Run an action above to get AI assistance.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </ScrollArea>
     </div>
