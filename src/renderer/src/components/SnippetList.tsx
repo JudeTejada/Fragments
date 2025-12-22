@@ -1,4 +1,6 @@
 import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -12,7 +14,7 @@ import {
 } from '@/components/ui/empty'
 import { ContextMenu, useContextMenu } from '@/components/ui/context-menu'
 import { useMultiSelect } from '@/hooks/useMultiSelect'
-import { Code2, Plus, FileCode, Loader2, Star, Trash2, Heart } from 'lucide-react'
+import { Code2, Plus, FileCode, Loader2, Star, Trash2, Heart, PanelLeftIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -128,6 +130,10 @@ export function SnippetList() {
   const deleteMultipleSnippets = useSnippetActions((actions) => actions.deleteMultipleSnippets)
   const toggleFavoriteMultiple = useSnippetActions((actions) => actions.toggleFavoriteMultiple)
   const [isCreating, setIsCreating] = React.useState(false)
+
+  // Mobile sidebar control
+  const isMobile = useIsMobile()
+  const { setOpenMobile } = useSidebar()
 
   // Multi-select hook
   const {
@@ -295,6 +301,17 @@ export function SnippetList() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 -ml-1"
+              onClick={() => setOpenMobile(true)}
+            >
+              <PanelLeftIcon className="size-4" />
+              <span className="sr-only">Open sidebar</span>
+            </Button>
+          )}
           <h2 className="font-semibold text-sm text-foreground">{headerTitle}</h2>
           {showFavoritesOnly && <Star className="size-4 text-amber-500 fill-amber-400" />}
           {isMultiSelectMode && (
