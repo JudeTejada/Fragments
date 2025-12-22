@@ -13,6 +13,7 @@ interface SidebarMenuItemComponentProps {
   isActive?: boolean
   badgeTestId?: string
   iconClassName?: string
+  testId?: string
   onClick?: () => void
 }
 
@@ -23,12 +24,15 @@ export function SidebarMenuItemComponent({
   isActive,
   badgeTestId = 'trash-count',
   iconClassName,
+  testId,
   onClick
 }: SidebarMenuItemComponentProps) {
+  const computedTestId = testId ?? `filter-${label.toLowerCase().replace(/\s+/g, '-')}`
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        data-testid={`filter-${label.toLowerCase().replace(/\s+/g, '-')}`}
+        data-testid={computedTestId}
         isActive={isActive}
         onClick={onClick}
         tooltip={label}

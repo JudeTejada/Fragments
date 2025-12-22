@@ -51,6 +51,7 @@ export function SidebarFilterSection({ className }: SidebarFilterSectionProps) {
             label="All Snippets"
             count={snippets.length}
             isActive={isAllActive}
+            testId="filter-all"
             onClick={() => {
               clearFilters()
               handleNormalViewClick()
@@ -64,6 +65,7 @@ export function SidebarFilterSection({ className }: SidebarFilterSectionProps) {
             iconClassName={cn(
               showFavoritesOnly ? 'text-amber-500 fill-amber-400' : 'text-muted-foreground'
             )}
+            testId="filter-favorites"
             onClick={() => {
               setShowFavoritesOnly((prev) => !prev)
               handleNormalViewClick()
@@ -74,6 +76,7 @@ export function SidebarFilterSection({ className }: SidebarFilterSectionProps) {
             label="Recently Deleted"
             count={trashItems.length}
             isActive={showTrash}
+            testId="filter-recently-deleted"
             onClick={handleRecentlyDeletedClick}
           />
         </SidebarMenu>
