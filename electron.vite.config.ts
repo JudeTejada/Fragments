@@ -18,12 +18,11 @@ export default defineConfig({
       react({
         babel: {
           plugins: [
-            ['babel-plugin-react-compiler', {}] // Add options if needed
+            ['babel-plugin-react-compiler', {}]
           ]
         }
       }),
       tailwindcss()
-      // Remove the duplicate react() - that's causing $RefreshReg$ conflicts
     ]
   }
 })

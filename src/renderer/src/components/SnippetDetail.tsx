@@ -166,20 +166,20 @@ export function SnippetDetail() {
   // Auto-save effect for title and notes
   React.useEffect(() => {
     if (!selectedSnippet) return
+
+    // Skip the first auto-save cycle after switching snippets to avoid writing
+    // previous snippet values onto the newly selected one.
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false
+      return
+    }
+
     const isDebounceStale = debouncedTitle !== title || debouncedNotes !== notes
     if (isDebounceStale) return
 
     const hasChanges =
       debouncedTitle !== selectedSnippet.title ||
       debouncedNotes !== (selectedSnippet.notes ?? '')
-
-    if (skipAutoSaveRef.current) {
-      if (!hasChanges) {
-        skipAutoSaveRef.current = false
-        return
-      }
-      skipAutoSaveRef.current = false
-    }
 
     if (hasChanges) {
       updateSnippet({
@@ -209,15 +209,14 @@ export function SnippetDetail() {
   React.useEffect(() => {
     if (!activeFragment || !selectedSnippet) return
 
+    // Avoid saving stale fragment content right after switching snippets
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false
+      return
+    }
+
     // Check if content has actually changed from the fragment's stored content
     const hasContentChanges = debouncedFragmentContent !== activeFragment.content
-    if (skipAutoSaveRef.current) {
-      if (!hasContentChanges) {
-        skipAutoSaveRef.current = false
-        return
-      }
-      skipAutoSaveRef.current = false
-    }
 
     if (hasContentChanges) {
       window.api.fragments.update({
@@ -225,7 +224,7 @@ export function SnippetDetail() {
         content: debouncedFragmentContent
       }).then((result) => {
         if (result.success) {
-          refreshData() // Refresh snippet data to sync state
+          refreshData({ silent: true }) // Refresh snippet data to sync state without flicker
           setShowSaved(true)
           setTimeout(() => setShowSaved(false), 2000)
         }
@@ -247,7 +246,7 @@ export function SnippetDetail() {
     if (!selectedSnippet) return
     window.api.fragments.update({ id: fragmentId, language }).then((result) => {
       if (result.success) {
-        refreshData()
+        refreshData({ silent: true })
       }
     })
   }
@@ -273,7 +272,7 @@ export function SnippetDetail() {
       language: 'plaintext'
     })
     if (result.success && result.data) {
-      await refreshData()
+      await refreshData({ silent: true })
       setActiveFragmentId(result.data.id)
     }
   }
@@ -282,7 +281,7 @@ export function SnippetDetail() {
   const handleDeleteFragment = async (fragmentId: string) => {
     const result = await window.api.fragments.delete(fragmentId)
     if (result.success) {
-      await refreshData()
+      await refreshData({ silent: true })
       // If we deleted the active fragment, switch to the first one
       if (fragmentId === activeFragmentId && selectedSnippet?.fragments) {
         const remaining = selectedSnippet.fragments.filter((f) => f.id !== fragmentId)
@@ -297,7 +296,7 @@ export function SnippetDetail() {
   const handleRenameFragment = async (fragmentId: string, newName: string) => {
     const result = await window.api.fragments.update({ id: fragmentId, name: newName })
     if (result.success) {
-      await refreshData()
+      await refreshData({ silent: true })
     }
   }
 

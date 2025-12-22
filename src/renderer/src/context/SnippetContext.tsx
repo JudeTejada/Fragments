@@ -24,6 +24,10 @@ type SnippetState = {
   showTrash: boolean
 }
 
+type RefreshOptions = {
+  silent?: boolean
+}
+
 type SnippetActions = {
   setSelectedSnippetId: (id: string | null) => void
   setSelectedSnippetIds: (ids: Set<string>) => void
@@ -36,7 +40,7 @@ type SnippetActions = {
   toggleFavoriteMultiple: (ids: string[]) => Promise<void>
   deleteSnippet: (id: string) => Promise<void>
   deleteMultipleSnippets: (ids: string[]) => Promise<void>
-  refreshData: () => Promise<void>
+  refreshData: (options?: RefreshOptions) => Promise<void>
   createTag: (name: string) => Promise<Tag | null>
   updateTag: (id: string, name: string) => Promise<Tag | null>
   deleteTag: (id: string) => Promise<boolean>
@@ -110,10 +114,19 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
       set((state) => ({
         showFavoritesOnly: typeof value === 'function' ? value(state.showFavoritesOnly) : value
       })),
-    refreshData: async () => {
-      set({ isLoading: true, error: null })
+    refreshData: async (options?: RefreshOptions) => {
+      const silent = options?.silent ?? false
+      if (!silent) {
+        set({ isLoading: true, error: null })
+      } else {
+        set({ error: null })
+      }
+
       await Promise.all([fetchSnippets(), fetchTags(), get().fetchTrashItems()])
-      set({ isLoading: false })
+
+      if (!silent) {
+        set({ isLoading: false })
+      }
     },
     createSnippet: async (payloadOverride?: Partial<CreateSnippetPayload>) => {
       set({ isSaving: true })

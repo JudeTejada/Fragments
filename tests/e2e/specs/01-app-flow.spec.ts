@@ -28,6 +28,7 @@ test.describe('Application Flow (Electron)', () => {
     await expect(page.locator('h1 input').first()).toHaveValue(TEST_SNIPPETS[0].title)
 
     await page.locator(`[data-testid="snippet-row"][data-title="${TEST_SNIPPETS[1].title}"]`).first().click()
+    await page.waitForTimeout(300)
     await expect(page.locator('h1 input').first()).toHaveValue(TEST_SNIPPETS[1].title)
   })
 

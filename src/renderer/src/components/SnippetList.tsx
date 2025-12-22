@@ -144,6 +144,8 @@ export function SnippetList() {
   // Context menu hook
   const contextMenu = useContextMenu()
 
+  const hasSnippets = filteredSnippets.length > 0
+  const showSkeletons = isLoading && !hasSnippets
   const hasNoSnippets = filteredSnippets.length === 0 && !isLoading
   const isSearchActive = searchQuery.trim().length > 0
   const headerTitle = isSearchActive
@@ -316,7 +318,7 @@ export function SnippetList() {
       {/* List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {isLoading ? (
+          {showSkeletons ? (
             // Loading skeletons
             <>
               <SnippetRowSkeleton />
