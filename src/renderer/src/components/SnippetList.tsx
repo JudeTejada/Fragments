@@ -297,7 +297,7 @@ export function SnippetList() {
   )
 
   return (
-    <div className="flex h-full w-80 flex-col border-r border-border bg-background/50">
+    <div className="flex h-full w-80 flex-shrink-0 flex-col border-r border-border bg-background/50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">

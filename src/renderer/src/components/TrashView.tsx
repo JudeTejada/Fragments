@@ -154,7 +154,7 @@ export function TrashView({
   }
 
   return (
-    <div className="flex flex-col h-full" data-testid="trash-view">
+    <div className="flex flex-col h-full min-w-0" data-testid="trash-view">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">

@@ -117,15 +117,20 @@ const cursorTheme = EditorView.theme({
     backgroundColor: 'transparent',
     fontSize: '13px',
     fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace',
-    lineHeight: '1.5'
+    lineHeight: '1.5',
+    height: '100%',
+    flex: '1 1 auto'
   },
   '.cm-content': {
     padding: '16px 0',
-    caretColor: 'var(--primary)'
+    caretColor: 'var(--primary)',
+    minHeight: '100%'
   },
   '.cm-scroller': {
     fontFamily: 'inherit',
-    lineHeight: 'inherit'
+    lineHeight: 'inherit',
+    overflow: 'auto auto',
+    flex: '1 1 auto'
   },
   '.cm-line': {
     padding: '0 16px'
@@ -319,7 +324,7 @@ export function CodeEditor({
   return (
     <div
       className={cn(
-        'group relative flex flex-col overflow-hidden',
+        'group relative flex flex-col overflow-hidden min-w-0',
         'rounded-xl border border-border/40 bg-muted/10',
         'shadow-sm transition-all duration-200',
         isFocused && 'ring-1 ring-primary/15 border-primary/30',
@@ -430,7 +435,7 @@ export function CodeEditor({
       </div>
 
       {/* Editor content */}
-      <div className="relative flex-1" style={{ minHeight: 'inherit' }}>
+      <div className="relative flex-1 min-h-0 h-full">
         <CodeMirror
           value={value}
           onChange={handleEditorChange}
@@ -447,11 +452,11 @@ export function CodeEditor({
             closeBrackets: true,
             indentOnInput: true
           }}
-          className="text-sm"
+          className="text-sm h-full"
           aria-label={`${languageLabel} code editor`}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          style={{ minHeight: 'inherit' }}
+          style={{ height: '100%', minHeight: 0 }}
         />
       </div>
     </div>

@@ -113,7 +113,7 @@ function AppContent() {
         <div className="flex h-screen w-full overflow-hidden bg-background">
           <SnippetSidebar />
 
-          <SidebarInset className="flex flex-row p-0 m-0 gap-0">
+          <SidebarInset className="flex flex-row p-0 m-0 gap-0 min-w-0 overflow-hidden">
             {showTrash ? (
               <TrashView
                 trashItems={trashItems}

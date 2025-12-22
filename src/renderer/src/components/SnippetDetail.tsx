@@ -368,9 +368,9 @@ export function SnippetDetail() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-background relative">
-      <ScrollArea className="flex-1">
-        <div className="mx-auto max-w-4xl p-4 md:p-8 space-y-8">
+    <div className="flex flex-1 flex-col bg-background relative overflow-hidden min-w-0">
+      <ScrollArea className="flex-1 h-full">
+        <div className="mx-auto max-w-4xl p-4 md:p-8 space-y-8 min-w-0">
           {/* Title - Hero */}
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-4">
@@ -439,13 +439,13 @@ export function SnippetDetail() {
           </div>
 
           {/* Code Editor - Main Focus */}
-          <div className="space-y-3">
+          <div className="space-y-3 min-h-0">
             {activeFragment && (
               <CodeEditor
                 value={fragmentContents[activeFragment.id] ?? activeFragment.content}
                 language={activeFragment.language}
                 onChange={handleFragmentContentChange}
-                className="min-h-[350px]"
+                className="flex-1 min-h-[350px]"
                 fragmentBar={
                   <FragmentTabs
                     fragments={selectedSnippet.fragments}
