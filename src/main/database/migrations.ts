@@ -126,5 +126,21 @@ export const MIGRATIONS = [
       FROM snippets
       WHERE id NOT IN (SELECT DISTINCT snippet_id FROM fragments);
     `
+  },
+
+  // Version 6: Tag sort order support
+  {
+    version: 6,
+    up: `
+      ALTER TABLE tags ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_tags_sort_order ON tags(sort_order);
+
+      -- Initialize sort_order based on current alphabetical ordering
+      UPDATE tags SET sort_order = (
+        SELECT COUNT(*) FROM tags t2
+        WHERE LOWER(t2.name) < LOWER(tags.name)
+           OR (LOWER(t2.name) = LOWER(tags.name) AND t2.id < tags.id)
+      );
+    `
   }
 ]

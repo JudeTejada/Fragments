@@ -44,6 +44,7 @@ type SnippetActions = {
   createTag: (name: string) => Promise<Tag | null>
   updateTag: (id: string, name: string) => Promise<Tag | null>
   deleteTag: (id: string) => Promise<boolean>
+  reorderTags: (tagIds: string[]) => Promise<void>
   // Trash actions
   moveToTrash: (id: string) => Promise<void>
   restoreFromTrash: (id: string) => Promise<void>
@@ -324,6 +325,26 @@ const useSnippetStore = create<SnippetStore>((set, get) => {
       } catch (err) {
         set({ error: getErrorMessage(err) })
         return false
+      } finally {
+        set({ isSaving: false })
+      }
+    },
+    reorderTags: async (tagIds: string[]): Promise<void> => {
+      set({ isSaving: true })
+      try {
+        const result = await tagApi.reorder(tagIds)
+        if (result.success) {
+          // Optimistically update local state
+          const { tags } = get()
+          const reorderedTags = tagIds
+            .map((id) => tags.find((t) => t.id === id))
+            .filter((t): t is Tag => t !== undefined)
+          set({ tags: reorderedTags })
+        } else {
+          set({ error: result.error || 'Failed to reorder tags' })
+        }
+      } catch (err) {
+        set({ error: getErrorMessage(err) })
       } finally {
         set({ isSaving: false })
       }

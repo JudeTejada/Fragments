@@ -71,7 +71,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TAGS_UPDATE, { id, name }),
 
     delete: (id: string): Promise<IPCResponse<boolean>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { id })
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, { id }),
+
+    reorder: (tagIds: string[]): Promise<IPCResponse<boolean>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAGS_REORDER, { tagIds })
   },
 
   settings: {

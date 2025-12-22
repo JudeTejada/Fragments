@@ -43,6 +43,7 @@ declare global {
         create: (name: string) => Promise<IPCResponse<Tag>>
         update: (id: string, name: string) => Promise<IPCResponse<Tag>>
         delete: (id: string) => Promise<IPCResponse<boolean>>
+        reorder: (tagIds: string[]) => Promise<IPCResponse<boolean>>
       }
       settings: {
         get: () => Promise<IPCResponse<Settings>>

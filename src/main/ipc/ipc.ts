@@ -258,6 +258,19 @@ export function registerIPCHandlers(): void {
     }
   })
 
+  /**
+   * Reorder tags by updating their sort_order values
+   */
+  ipcMain.handle(IPC_CHANNELS.TAGS_REORDER, (_event, args: { tagIds: string[] }) => {
+    try {
+      TagRepository.reorder(args.tagIds)
+      return { success: true, data: true }
+    } catch (error) {
+      console.error('Error reordering tags:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   // ========================================
   // Settings Handlers
   // ========================================

@@ -14,6 +14,7 @@ function generateId(): string {
 interface TagRow {
   id: string;
   name: string;
+  sort_order: number;
 }
 
 interface TagWithCountRow extends TagRow {
@@ -28,11 +29,11 @@ export const TagRepository = {
     const db = getDatabase();
 
     const rows = db.prepare(`
-      SELECT t.id, t.name, COUNT(st.snippet_id) as count
+      SELECT t.id, t.name, t.sort_order, COUNT(st.snippet_id) as count
       FROM tags t
       LEFT JOIN snippet_tags st ON t.id = st.tag_id
-      GROUP BY t.id, t.name
-      ORDER BY t.name
+      GROUP BY t.id, t.name, t.sort_order
+      ORDER BY t.sort_order
     `).all() as TagWithCountRow[];
 
     return rows.map(row => ({
@@ -57,8 +58,8 @@ export const TagRepository = {
       return result;
     }
 
-    const findTag = db.prepare('SELECT id, name FROM tags WHERE LOWER(name) = ?');
-    const insertTag = db.prepare('INSERT INTO tags (id, name) VALUES (?, ?)');
+    const findTag = db.prepare('SELECT id, name, sort_order FROM tags WHERE LOWER(name) = ?');
+    const insertTag = db.prepare('INSERT INTO tags (id, name, sort_order) VALUES (?, ?, ?)');
 
     const transaction = db.transaction(() => {
       for (const name of normalizedNames) {
@@ -69,12 +70,15 @@ export const TagRepository = {
           // Create new tag with original casing from first occurrence
           const originalName = names.find(n => n.trim().toLowerCase() === name)?.trim() ?? name;
           const id = generateId();
-          insertTag.run(id, originalName);
-          row = { id, name: originalName };
+          // Get the next sort_order value
+          const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM tags').get() as { max: number } | undefined;
+          const sortOrder = (maxOrder?.max ?? -1) + 1;
+          insertTag.run(id, originalName, sortOrder);
+          row = { id, name: originalName, sort_order: sortOrder };
         }
 
         // Avoid duplicates in result
-        if (!result.find(t => t.id === row!.id)) {
+        if (row && !result.find(t => t.id === row!.id)) {
           result.push({
             id: row.id,
             name: row.name,
@@ -152,7 +156,11 @@ export const TagRepository = {
     }
 
     const id = generateId();
-    db.prepare('INSERT INTO tags (id, name) VALUES (?, ?)').run(id, trimmedName);
+    // Get the next sort_order value
+    const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM tags').get() as { max: number } | undefined;
+    const sortOrder = (maxOrder?.max ?? -1) + 1;
+
+    db.prepare('INSERT INTO tags (id, name, sort_order) VALUES (?, ?, ?)').run(id, trimmedName, sortOrder);
 
     return {
       id,
@@ -214,5 +222,20 @@ export const TagRepository = {
 
     transaction();
     return true;
+  },
+
+  /**
+   * Reorder tags by updating their sort_order values
+   */
+  reorder(tagIds: string[]): void {
+    const db = getDatabase();
+
+    const transaction = db.transaction(() => {
+      for (let i = 0; i < tagIds.length; i++) {
+        db.prepare('UPDATE tags SET sort_order = ? WHERE id = ?').run(i, tagIds[i]);
+      }
+    });
+
+    transaction();
   },
 };
