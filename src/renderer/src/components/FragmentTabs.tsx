@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, X } from 'lucide-react'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import type { Fragment } from '@shared/types'
 import { cn } from '@/lib/utils'
 import {
@@ -22,7 +23,6 @@ interface FragmentTabsProps {
   onAddFragment: () => void
   onDeleteFragment: (fragmentId: string) => void
   onRenameFragment: (fragmentId: string, newName: string) => void
-  children: (activeFragment: Fragment | undefined) => React.ReactNode
 }
 
 export function FragmentTabs({
@@ -31,14 +31,11 @@ export function FragmentTabs({
   onFragmentChange,
   onAddFragment,
   onDeleteFragment,
-  onRenameFragment,
-  children
+  onRenameFragment
 }: FragmentTabsProps) {
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [editingName, setEditingName] = React.useState('')
   const [deletingFragment, setDeletingFragment] = React.useState<Fragment | null>(null)
-
-  const activeFragment = fragments.find((f) => f.id === activeFragmentId) ?? fragments[0]
 
   const handleDoubleClick = (fragment: Fragment) => {
     setEditingId(fragment.id)
@@ -59,77 +56,88 @@ export function FragmentTabs({
     }
   }
 
-  // Show simple content if only one fragment
-  if (fragments.length <= 1 && !activeFragment) {
-    return <>{children(undefined)}</>
+  // Hide entirely if no fragments
+  if (fragments.length === 0) {
+    return null
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Fragment tabs - Minimal pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-        {fragments.map((fragment) => (
-          <div key={fragment.id} className="relative group flex-shrink-0">
-            {editingId === fragment.id ? (
-              <Input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onBlur={handleRenameSubmit}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRenameSubmit()
-                  if (e.key === 'Escape') setEditingId(null)
-                }}
-                className="h-7 w-28 text-xs pr-6"
-                autoFocus
-              />
-            ) : (
-              <button
-                type="button"
-                className={cn(
-                  'h-7 px-3 text-xs gap-1.5 rounded-full transition-all',
-                  'border border-transparent',
-                  activeFragmentId === fragment.id
-                    ? 'bg-muted/60 text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                )}
-                onClick={() => onFragmentChange(fragment.id)}
-                onDoubleClick={() => handleDoubleClick(fragment)}
-              >
-                <span className="truncate max-w-20 inline-block align-middle">
-                  {fragment.name}
-                </span>
-                <span className="text-[10px] opacity-60 ml-0.5">
-                  {fragment.language}
-                </span>
-                {fragments.length > 1 && (
-                  <span
-                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity inline-flex"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (fragment.content.trim()) {
-                        setDeletingFragment(fragment)
-                      } else {
-                        onDeleteFragment(fragment.id)
-                      }
-                    }}
-                  >
-                    <X className="size-3 hover:text-destructive" />
+    <>
+      {/* Fragment tabs - Text only with underline */}
+      <ScrollArea className="w-full h-auto" scrollbarGutter>
+        <div className="flex w-max items-center gap-4 py-1.5 px-3">
+          {fragments.map((fragment) => (
+            <div key={fragment.id} className="relative group flex-shrink-0">
+              {editingId === fragment.id ? (
+                <Input
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={handleRenameSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRenameSubmit()
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                  className="h-6 w-28 text-xs pr-6"
+                  autoFocus
+                />
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'text-xs font-medium transition-all duration-150 relative group/tab',
+                    'py-1.5 pl-2 pr-6 rounded-md select-none',
+                    activeFragmentId === fragment.id
+                      ? 'text-blue-500'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  onClick={() => onFragmentChange(fragment.id)}
+                  onDoubleClick={() => handleDoubleClick(fragment)}
+                >
+                  <span className="truncate max-w-24 inline-block align-middle">
+                    {fragment.name}
                   </span>
-                )}
-              </button>
+                  
+                  {/* Active underline */}
+                  {activeFragmentId === fragment.id && (
+                    <span className="absolute bottom-0.5 left-2 right-6 h-0.5 bg-blue-500 rounded-full" />
+                  )}
+
+                  {/* Delete X on hover */}
+                  {fragments.length > 1 && (
+                    <span
+                      className="opacity-0 group-hover/tab:opacity-100 transition-all duration-200 absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-md hover:bg-muted-foreground/10 text-muted-foreground/50 hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (fragment.content.trim()) {
+                          setDeletingFragment(fragment)
+                        } else {
+                          onDeleteFragment(fragment.id)
+                        }
+                      }}
+                    >
+                      <X className="size-3" />
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          ))}
+          {/* Add button - borderless icon */}
+          <button
+            type="button"
+            onClick={onAddFragment}
+            className={cn(
+              'p-1 rounded-sm transition-colors',
+              'text-muted-foreground hover:text-foreground hover:bg-muted/30',
+              'flex-shrink-0 ml-auto'
             )}
-          </div>
-        ))}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 flex-shrink-0 rounded-full hover:bg-muted/50"
-          onClick={onAddFragment}
-        >
-          <Plus className="size-3.5" />
-          <span className="sr-only">Add fragment</span>
-        </Button>
-      </div>
+            title="Add fragment"
+          >
+            <Plus className="size-3.5" />
+          </button>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
 
       {/* Delete confirmation dialog */}
       <AlertDialog
@@ -155,9 +163,6 @@ export function FragmentTabs({
           </AlertDialogFooter>
         </AlertDialogPopup>
       </AlertDialog>
-
-      {/* Active fragment content */}
-      <div className="flex-1 pt-3">{children(activeFragment)}</div>
-    </div>
+    </>
   )
 }

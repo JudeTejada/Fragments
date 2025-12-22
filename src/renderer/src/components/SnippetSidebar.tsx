@@ -4,7 +4,8 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarRail,
-  useSidebar
+  useSidebar,
+  SidebarTrigger
 } from '@/components/ui/sidebar'
 import { SettingsSheet } from '@/components/SettingsSheet'
 import { SidebarFilterSection } from './SidebarFilterSection'
@@ -63,6 +64,7 @@ export function SnippetSidebar() {
       <SidebarHeader className="gap-3.5 border-b border-sidebar-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold text-foreground">
+            <SidebarTrigger className="-ml-1" />
             <span className="truncate transition-all duration-200 ease-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
               Fragment
             </span>

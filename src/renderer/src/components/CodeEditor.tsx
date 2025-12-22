@@ -194,6 +194,7 @@ interface CodeEditorProps {
   readOnly?: boolean
   className?: string
   placeholder?: string
+  fragmentBar?: React.ReactNode
 }
 
 export function CodeEditor({
@@ -202,7 +203,8 @@ export function CodeEditor({
   onChange,
   readOnly = false,
   className,
-  placeholder = 'Enter your code here...'
+  placeholder = 'Enter your code here...',
+  fragmentBar
 }: CodeEditorProps) {
   // Detect dark mode
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
@@ -324,6 +326,9 @@ export function CodeEditor({
         className
       )}
     >
+      {/* Fragment bar slot */}
+      {fragmentBar}
+
       {/* Header Bar */}
       <div className="relative flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
         {/* Left: Language selector */}

@@ -370,7 +370,7 @@ export function SnippetDetail() {
   return (
     <div className="flex flex-1 flex-col bg-background relative">
       <ScrollArea className="flex-1">
-        <div className="mx-auto max-w-4xl p-8 space-y-8">
+        <div className="mx-auto max-w-4xl p-4 md:p-8 space-y-8">
           {/* Title - Hero */}
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-4">
@@ -440,25 +440,24 @@ export function SnippetDetail() {
 
           {/* Code Editor - Main Focus */}
           <div className="space-y-3">
-            <FragmentTabs
-              fragments={selectedSnippet.fragments}
-              activeFragmentId={activeFragmentId}
-              onFragmentChange={setActiveFragmentId}
-              onAddFragment={handleAddFragment}
-              onDeleteFragment={handleDeleteFragment}
-              onRenameFragment={handleRenameFragment}
-            >
-              {(fragment) =>
-                fragment && (
-                  <CodeEditor
-                    value={fragmentContents[fragment.id] ?? fragment.content}
-                    language={fragment.language}
-                    onChange={handleFragmentContentChange}
-                    className="min-h-[350px]"
+            {activeFragment && (
+              <CodeEditor
+                value={fragmentContents[activeFragment.id] ?? activeFragment.content}
+                language={activeFragment.language}
+                onChange={handleFragmentContentChange}
+                className="min-h-[350px]"
+                fragmentBar={
+                  <FragmentTabs
+                    fragments={selectedSnippet.fragments}
+                    activeFragmentId={activeFragmentId}
+                    onFragmentChange={setActiveFragmentId}
+                    onAddFragment={handleAddFragment}
+                    onDeleteFragment={handleDeleteFragment}
+                    onRenameFragment={handleRenameFragment}
                   />
-                )
-              }
-            </FragmentTabs>
+                }
+              />
+            )}
           </div>
 
           {/* Notes - Collapsible */}
