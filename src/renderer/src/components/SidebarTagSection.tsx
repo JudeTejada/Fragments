@@ -1,21 +1,7 @@
 import * as React from 'react'
 import { useForm } from '@tanstack/react-form'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
-} from '@dnd-kit/sortable'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Hash, Pencil, Plus, Trash2 } from 'lucide-react'
 import {
@@ -60,13 +46,15 @@ function SortableTagItem({
   onClick: () => void
   onContextMenu: (e: React.MouseEvent) => void
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging
-  } = useSortable({ id: tag.id })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: tag.id })
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: tag.id,
+    data: {
+      type: 'tag',
+      tagName: tag.name
+    }
+  })
 
   const style: React.CSSProperties = {
     transform: transform ? CSS.Transform.toString(transform) : undefined
@@ -75,6 +63,7 @@ function SortableTagItem({
   return (
     <SidebarMenuItem ref={setNodeRef} style={style}>
       <SidebarMenuButton
+        ref={setDroppableRef}
         data-testid="tag-filter"
         data-tag-id={tag.id}
         data-tag-name={tag.name}
@@ -84,7 +73,9 @@ function SortableTagItem({
         tooltip={`#${tag.name}`}
         className={cn(
           'transition-all duration-200 ease-out cursor-grab active:cursor-grabbing',
-          isDragging && 'opacity-50 ring-2 ring-primary'
+          isDragging && 'opacity-50',
+          isOver &&
+            'bg-blue-50/80 dark:bg-blue-950/30 scale-[1.02] ring-1 ring-blue-300/50 dark:ring-blue-700/50'
         )}
         {...attributes}
         {...listeners}
@@ -112,17 +103,7 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
   const createTag = useSnippetActions((actions) => actions.createTag)
   const updateTag = useSnippetActions((actions) => actions.updateTag)
   const deleteTag = useSnippetActions((actions) => actions.deleteTag)
-  const reorderTags = useSnippetActions((actions) => actions.reorderTags)
   const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 }
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
-  )
 
   const [isAddTagOpen, setIsAddTagOpen] = React.useState(false)
   const [editingTagId, setEditingTagId] = React.useState<string | null>(null)
@@ -162,17 +143,6 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
       setSelectedTagIds([...selectedTagIds, tagId])
     }
     setShowTrash(false)
-  }
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      const oldIndex = tags.findIndex((tag) => tag.id === active.id)
-      const newIndex = tags.findIndex((tag) => tag.id === over.id)
-      const newTags = arrayMove(tags, oldIndex, newIndex)
-      const tagIds = newTags.map((tag) => tag.id)
-      await reorderTags(tagIds)
-    }
   }
 
   const handleCreateTag = () => addTagForm.handleSubmit()
@@ -235,11 +205,7 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
   )
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
+    <>
       <SidebarGroup className={className}>
         <div className="flex items-center justify-between pr-2">
           <SidebarGroupLabel className="transition-all duration-200 ease-out group-data-[collapsible=icon]:opacity-0">
@@ -328,7 +294,6 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* Tag Context Menu */}
       <ContextMenu
         open={tagContextMenu.isOpen}
         position={tagContextMenu.position}
@@ -336,7 +301,6 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
         items={tagContextMenuItems}
       />
 
-      {/* Edit Tag Popover */}
       <Popover open={isEditPopoverOpen} onOpenChange={setIsEditPopoverOpen}>
         <PopoverTrigger render={<span />} />
         <PopoverPopup className="w-64">
@@ -391,15 +355,14 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
         </PopoverPopup>
       </Popover>
 
-      {/* Delete Tag Confirmation */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogTrigger render={<span />} />
         <AlertDialogPopup>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Tag</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the tag "{deletingTag?.name}"? This will remove the
-              tag from all snippets. The snippets themselves will not be deleted.
+              Are you sure you want to delete the tag &quot;{deletingTag?.name}&quot;? This will
+              remove the tag from all snippets. The snippets themselves will not be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -414,6 +377,6 @@ export function SidebarTagSection({ className }: SidebarTagSectionProps) {
           </AlertDialogFooter>
         </AlertDialogPopup>
       </AlertDialog>
-    </DndContext>
+    </>
   )
 }

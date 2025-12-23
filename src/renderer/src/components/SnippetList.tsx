@@ -18,6 +18,7 @@ import { Code2, Plus, FileCode, Loader2, Star, Trash2, Heart, PanelLeftIcon } fr
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { useDraggable } from '@dnd-kit/core'
 import * as React from 'react'
 
 function formatRelativeTime(dateString: string): string {
@@ -37,6 +38,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 interface SnippetRowProps {
+  id: string
   title: string
   language: string
   tags: { id: string; name: string }[]
@@ -44,11 +46,14 @@ interface SnippetRowProps {
   isFavorite: boolean
   isSelected: boolean
   isMultiSelected: boolean
+  allSelectedIds: Set<string>
+  allSnippets: Array<{ id: string; tags: { id: string; name: string }[] }>
   onClick: (e: React.MouseEvent) => void
   onContextMenu: (e: React.MouseEvent) => void
 }
 
 function SnippetRow({
+  id,
   title,
   language,
   tags,
@@ -56,11 +61,28 @@ function SnippetRow({
   isFavorite,
   isSelected,
   isMultiSelected,
+  allSelectedIds,
+  allSnippets,
   onClick,
   onContextMenu
 }: SnippetRowProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id,
+    data: {
+      type: 'snippet',
+      title,
+      language,
+      tags,
+      allSelectedIds,
+      allSnippets
+    }
+  })
+
   return (
     <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={onClick}
       onContextMenu={onContextMenu}
       data-testid="snippet-row"
@@ -70,7 +92,8 @@ function SnippetRow({
         'hover:bg-accent/50',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isSelected && 'bg-accent shadow-sm',
-        isMultiSelected && !isSelected && 'bg-accent/70 ring-1 ring-primary/30'
+        isMultiSelected && !isSelected && 'bg-accent/70 ring-1 ring-primary/30',
+        isDragging && 'opacity-50 cursor-grabbing'
       )}
     >
       <div className="flex flex-col gap-1.5">
@@ -117,7 +140,30 @@ function SnippetRowSkeleton() {
   )
 }
 
-export function SnippetList() {
+export function SnippetList({
+  activeDragItem,
+  dragOverTagId: _dragOverTagId
+}: {
+  activeDragItem: {
+    type: 'snippet'
+    id: string
+    title: string
+    language: string
+    tags: { id: string; name: string }[]
+    allSelectedIds: Set<string>
+  } | null
+  dragOverTagId: string | null
+}) {
+  React.useEffect(() => {
+    if (activeDragItem) {
+      document.body.style.cursor = 'grabbing'
+    } else {
+      document.body.style.cursor = ''
+    }
+    return () => {
+      document.body.style.cursor = ''
+    }
+  }, [activeDragItem])
   const filteredSnippets = useFilteredSnippets()
   const selectedSnippetId = useSnippetState((state) => state.selectedSnippetId)
   const searchQuery = useSnippetState((state) => state.searchQuery)
@@ -367,11 +413,7 @@ export function SnippetList() {
               </EmptyHeader>
               {!isSearchActive && (
                 <EmptyContent>
-                  <Button
-                    onClick={handleCreateSnippet}
-                    size="sm"
-                    disabled={isCreating || isSaving}
-                  >
+                  <Button onClick={handleCreateSnippet} size="sm" disabled={isCreating || isSaving}>
                     <Plus className="size-4 mr-1" />
                     Create Snippet
                   </Button>
@@ -382,6 +424,7 @@ export function SnippetList() {
             filteredSnippets.map((snippet, index) => (
               <SnippetRow
                 key={snippet.id}
+                id={snippet.id}
                 title={snippet.title}
                 language={snippet.language}
                 tags={snippet.tags}
@@ -389,6 +432,10 @@ export function SnippetList() {
                 isFavorite={snippet.isFavorite}
                 isSelected={snippet.id === selectedSnippetId}
                 isMultiSelected={isMultiSelected(snippet.id)}
+                allSelectedIds={
+                  multiSelectedIds.size > 0 ? multiSelectedIds : new Set([snippet.id])
+                }
+                allSnippets={filteredSnippets}
                 onClick={(e) => handleSnippetClick(snippet.id, index, e)}
                 onContextMenu={(e) => handleContextMenu(snippet.id, e)}
               />
