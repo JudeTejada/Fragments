@@ -1,5 +1,9 @@
 import * as React from 'react'
-import { useSelectedSnippet, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useSelectedSnippet } from '@/stores/derived'
+import { useSnippetStore } from '@/stores/snippet-store'
+import { useTagStore } from '@/stores/tag-store'
+import { useFavoritesStore } from '@/stores/favorites-store'
+import { useTrashStore } from '@/stores/trash-store'
 import { CodeEditor } from '@/components/CodeEditor'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -94,12 +98,14 @@ function EditableTitle({
 
 export function SnippetDetail() {
   const selectedSnippet = useSelectedSnippet()
-  const isSaving = useSnippetState((state) => state.isSaving)
-  const tags = useSnippetState((state) => state.tags)
-  const updateSnippet = useSnippetActions((actions) => actions.updateSnippet)
-  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
-  const toggleFavorite = useSnippetActions((actions) => actions.toggleFavorite)
-  const refreshData = useSnippetActions((actions) => actions.refreshData)
+  const isSaving = useSnippetStore((s) => s.isSaving)
+  const tags = useTagStore((s) => s.tags)
+  const updateSnippet = useSnippetStore((s) => s.updateSnippet)
+  const deleteSnippet = useSnippetStore((s) => s.deleteSnippet)
+  const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
+  const refreshSnippets = useSnippetStore((s) => s.refreshSnippets)
+  const refreshTags = useTagStore((s) => s.refreshTags)
+  const fetchTrashItems = useTrashStore((s) => s.fetchTrashItems)
 
   // Local state for editing
   const [title, setTitle] = React.useState('')
@@ -202,6 +208,14 @@ export function SnippetDetail() {
     notes,
     updateSnippet
   ])
+
+  // Combined refresh function
+  const refreshData = React.useCallback(
+    async (_options?: { silent?: boolean }) => {
+      await Promise.all([refreshSnippets(), refreshTags(), fetchTrashItems()])
+    },
+    [refreshSnippets, refreshTags, fetchTrashItems]
+  )
 
   // Fragment content change handler (with debounced save)
   const debouncedFragmentContent = useDebounce(currentFragmentContent, 500)

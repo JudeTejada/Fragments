@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { Code2, Star, Trash2 } from 'lucide-react'
-import { useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useSnippetStore } from '@/stores/snippet-store'
+import { useUiStore } from '@/stores/ui-store'
+import { useTrashStore } from '@/stores/trash-store'
 import { SidebarGroup, SidebarGroupContent, SidebarMenu } from '@/components/ui/sidebar'
 import { SidebarMenuItemComponent } from './SidebarMenuItem'
 import { cn } from '@/lib/utils'
@@ -10,16 +12,16 @@ interface SidebarFilterSectionProps {
 }
 
 export function SidebarFilterSection({ className }: SidebarFilterSectionProps) {
-  const snippets = useSnippetState((state) => state.snippets)
-  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
-  const trashItems = useSnippetState((state) => state.trashItems)
-  const showTrash = useSnippetState((state) => state.showTrash)
-  const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
+  const snippets = useSnippetStore((s) => s.snippets)
+  const showFavoritesOnly = useUiStore((s) => s.showFavoritesOnly)
+  const trashItems = useTrashStore((s) => s.trashItems)
+  const showTrash = useUiStore((s) => s.showTrash)
+  const selectedTagIds = useUiStore((s) => s.selectedTagIds)
 
-  const setShowFavoritesOnly = useSnippetActions((actions) => actions.setShowFavoritesOnly)
-  const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
-  const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
-  const fetchTrashItems = useSnippetActions((actions) => actions.fetchTrashItems)
+  const setShowFavoritesOnly = useUiStore((s) => s.setShowFavoritesOnly)
+  const setShowTrash = useUiStore((s) => s.setShowTrash)
+  const setSelectedTagIds = useUiStore((s) => s.setSelectedTagIds)
+  const fetchTrashItems = useTrashStore((s) => s.fetchTrashItems)
 
   const favoriteCount = React.useMemo(
     () => snippets.filter((snippet) => snippet.isFavorite).length,

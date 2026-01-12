@@ -27,7 +27,8 @@ import {
   AlertDialogDescription,
   AlertDialogClose
 } from '@/components/ui/alert-dialog'
-import { useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useTagStore } from '@/stores/tag-store'
+import { useUiStore } from '@/stores/ui-store'
 import { cn } from '@/lib/utils'
 import type { Tag } from '@shared/types'
 
@@ -96,14 +97,14 @@ function SortableTagItem({
 }
 
 export function SidebarTagSection({ className }: SidebarTagSectionProps) {
-  const tags = useSnippetState((state) => state.tags)
-  const selectedTagIds = useSnippetState((state) => state.selectedTagIds)
+  const tags = useTagStore((s) => s.tags)
+  const selectedTagIds = useUiStore((s) => s.selectedTagIds)
 
-  const setSelectedTagIds = useSnippetActions((actions) => actions.setSelectedTagIds)
-  const createTag = useSnippetActions((actions) => actions.createTag)
-  const updateTag = useSnippetActions((actions) => actions.updateTag)
-  const deleteTag = useSnippetActions((actions) => actions.deleteTag)
-  const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
+  const setSelectedTagIds = useUiStore((s) => s.setSelectedTagIds)
+  const createTag = useTagStore((s) => s.createTag)
+  const updateTag = useTagStore((s) => s.updateTag)
+  const deleteTag = useTagStore((s) => s.deleteTag)
+  const setShowTrash = useUiStore((s) => s.setShowTrash)
 
   const [isAddTagOpen, setIsAddTagOpen] = React.useState(false)
   const [editingTagId, setEditingTagId] = React.useState<string | null>(null)

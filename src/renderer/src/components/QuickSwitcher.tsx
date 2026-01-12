@@ -1,6 +1,7 @@
 import * as React from 'react'
 import Fuse from 'fuse.js'
-import { useSnippetState, useSnippetActions } from '@/context/SnippetContext'
+import { useSnippetStore } from '@/stores/snippet-store'
+import { useUiStore } from '@/stores/ui-store'
 import {
   Command,
   CommandDialog,
@@ -54,8 +55,8 @@ interface SnippetItemData {
 type SearchableSnippet = Snippet & { fragmentsText: string }
 
 export function QuickSwitcher({ open, onOpenChange }: QuickSwitcherProps) {
-  const snippets = useSnippetState((state) => state.snippets)
-  const setSelectedSnippetId = useSnippetActions((actions) => actions.setSelectedSnippetId)
+  const snippets = useSnippetStore((state) => state.snippets)
+  const setSelectedSnippetId = useUiStore((actions) => actions.setSelectedSnippetId)
   const [query, setQuery] = React.useState('')
 
   const searchableSnippets = React.useMemo<SearchableSnippet[]>(() => {

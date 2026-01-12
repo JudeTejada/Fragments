@@ -17,7 +17,11 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { SnippetProvider, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { SnippetProvider } from '@/stores/derived'
+import { useSnippetStore } from '@/stores/snippet-store'
+import { useTagStore } from '@/stores/tag-store'
+import { useUiStore } from '@/stores/ui-store'
+import { useTrashStore } from '@/stores/trash-store'
 import { SnippetSidebar } from '@/components/SnippetSidebar'
 import { SnippetList } from '@/components/SnippetList'
 import { SnippetDetail } from '@/components/SnippetDetail'
@@ -83,13 +87,13 @@ function DragPreview({ item, isExiting }: { item: DragItem; isExiting: boolean }
 }
 
 function AppContent() {
-  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
-  const showTrash = useSnippetState((state) => state.showTrash)
-  const trashItems = useSnippetState((state) => state.trashItems)
-  const restoreFromTrash = useSnippetActions((actions) => actions.restoreFromTrash)
-  const permanentDelete = useSnippetActions((actions) => actions.permanentDelete)
-  const emptyTrash = useSnippetActions((actions) => actions.emptyTrash)
-  const setShowTrash = useSnippetActions((actions) => actions.setShowTrash)
+  const createSnippet = useSnippetStore((s) => s.createSnippet)
+  const showTrash = useUiStore((s) => s.showTrash)
+  const trashItems = useTrashStore((s) => s.trashItems)
+  const restoreFromTrash = useTrashStore((s) => s.restoreFromTrash)
+  const permanentDelete = useTrashStore((s) => s.permanentDelete)
+  const emptyTrash = useTrashStore((s) => s.emptyTrash)
+  const setShowTrash = useUiStore((s) => s.setShowTrash)
   const [quickCapture, setQuickCapture] = React.useState<{ open: boolean; content: string }>({
     open: false,
     content: ''
@@ -111,9 +115,9 @@ function AppContent() {
     })
   )
 
-  const updateSnippet = useSnippetActions((actions) => actions.updateSnippet)
-  const reorderTags = useSnippetActions((actions) => actions.reorderTags)
-  const tags = useSnippetState((state) => state.tags)
+  const updateSnippet = useSnippetStore((s) => s.updateSnippet)
+  const reorderTags = useTagStore((s) => s.reorderTags)
+  const tags = useTagStore((s) => s.tags)
 
   const handleBackToSnippets = () => {
     setShowTrash(false)
@@ -270,8 +274,9 @@ function AppContent() {
       return
     }
 
+    const isTagDrag = tags.some((t) => t.id === active.id)
     if (
-      active.data.current?.type === 'tag' &&
+      isTagDrag &&
       over?.data.current?.type === 'tag' &&
       active.id !== over.id
     ) {

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from '@/components/ui/select'
-import { useSnippetActions } from '@/context/SnippetContext'
+import { useSnippetStore } from '@/stores/snippet-store'
 import { SUPPORTED_LANGUAGES } from '@shared/types'
 import { Label } from '@/components/ui/label'
 import { useForm } from '@tanstack/react-form'
@@ -26,7 +26,7 @@ type QuickCaptureModalProps = {
 }
 
 export function QuickCaptureModal({ open, initialContent, onClose }: QuickCaptureModalProps) {
-  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
+  const createSnippet = useSnippetStore((s) => s.createSnippet)
 
   const form = useForm({
     defaultValues: {

@@ -1,4 +1,7 @@
-import { useFilteredSnippets, useSnippetActions, useSnippetState } from '@/context/SnippetContext'
+import { useFilteredSnippets } from '@/stores/derived'
+import { useSnippetStore } from '@/stores/snippet-store'
+import { useUiStore } from '@/stores/ui-store'
+import { useFavoritesStore } from '@/stores/favorites-store'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
@@ -165,16 +168,16 @@ export function SnippetList({
     }
   }, [activeDragItem])
   const filteredSnippets = useFilteredSnippets()
-  const selectedSnippetId = useSnippetState((state) => state.selectedSnippetId)
-  const searchQuery = useSnippetState((state) => state.searchQuery)
-  const showFavoritesOnly = useSnippetState((state) => state.showFavoritesOnly)
-  const isLoading = useSnippetState((state) => state.isLoading)
-  const isSaving = useSnippetState((state) => state.isSaving)
-  const setSelectedSnippetId = useSnippetActions((actions) => actions.setSelectedSnippetId)
-  const createSnippet = useSnippetActions((actions) => actions.createSnippet)
-  const deleteSnippet = useSnippetActions((actions) => actions.deleteSnippet)
-  const deleteMultipleSnippets = useSnippetActions((actions) => actions.deleteMultipleSnippets)
-  const toggleFavoriteMultiple = useSnippetActions((actions) => actions.toggleFavoriteMultiple)
+  const selectedSnippetId = useUiStore((state) => state.selectedSnippetId)
+  const searchQuery = useUiStore((state) => state.searchQuery)
+  const showFavoritesOnly = useUiStore((state) => state.showFavoritesOnly)
+  const isLoading = useSnippetStore((state) => state.isLoading)
+  const isSaving = useSnippetStore((state) => state.isSaving)
+  const setSelectedSnippetId = useUiStore((s) => s.setSelectedSnippetId)
+  const createSnippet = useSnippetStore((s) => s.createSnippet)
+  const deleteSnippet = useSnippetStore((s) => s.deleteSnippet)
+  const deleteMultipleSnippets = useSnippetStore((s) => s.deleteMultipleSnippets)
+  const toggleFavoriteMultiple = useFavoritesStore((s) => s.toggleFavoriteMultiple)
   const [isCreating, setIsCreating] = React.useState(false)
 
   // Mobile sidebar control
