@@ -56,7 +56,8 @@ export const useTrashStore = create<TrashStore>()(
             // Refresh both snippets and trash
             await Promise.all([
               snippetStore.getState().refreshSnippets({ silent: true }),
-              get().fetchTrashItems()
+              get().fetchTrashItems(),
+              tagStore.getState().refreshTags({ silent: true })
             ])
           } else {
             set({ error: result.error || 'Failed to restore snippet from trash' })
@@ -112,6 +113,7 @@ export const useTrashStore = create<TrashStore>()(
           if (result.success) {
             // Refresh trash items
             await get().fetchTrashItems()
+            await tagStore.getState().refreshTags({ silent: true })
           } else {
             set({ error: result.error || 'Failed to move snippet to trash' })
           }

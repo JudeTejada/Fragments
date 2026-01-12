@@ -14,6 +14,15 @@ async function refreshTrashItems() {
   }
 }
 
+async function refreshTags() {
+  try {
+    const { tagStore } = await import('./tag-store')
+    await tagStore.getState().refreshTags({ silent: true })
+  } catch (err) {
+    console.error('Failed to refresh tags', err)
+  }
+}
+
 const snippetApi = window.api.snippets
 
 interface SnippetState {
@@ -96,6 +105,8 @@ export const useSnippetStore = create<SnippetStore>()(
                 snippet.id === update.id ? updatedSnippet : snippet
               )
             }))
+            // Refresh tag counts to reflect changes
+            await refreshTags()
           } else {
             set({ error: result.error || 'Failed to update snippet' })
           }
