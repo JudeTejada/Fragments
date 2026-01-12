@@ -23,6 +23,27 @@ interface IPCResponse<T> {
   error?: string
 }
 
+// Filter out extension console noise in dev (e.g., Antigravity extension)
+const originalLog = console.log
+const shouldFilter = (message: unknown): boolean => {
+  if (typeof message === 'string') {
+    return (
+      message === 'bootstrapping' ||
+      message.includes('#000000') ||
+      message.includes('#cd3131') ||
+      message.includes('antigravity')
+    )
+  }
+  if (Array.isArray(message) && message.length > 0) {
+    const first = message[0]
+    if (typeof first === 'string' && first.startsWith('#')) return true
+  }
+  return false
+}
+console.log = (...args: unknown[]) => {
+  if (!args.some(shouldFilter)) originalLog.apply(console, args)
+}
+
 // Custom APIs for renderer
 const api = {
   snippets: {
