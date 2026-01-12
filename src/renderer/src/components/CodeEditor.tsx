@@ -5,6 +5,14 @@ import { html } from '@codemirror/lang-html'
 import { css } from '@codemirror/lang-css'
 import { json } from '@codemirror/lang-json'
 import { markdown } from '@codemirror/lang-markdown'
+import { sql } from '@codemirror/lang-sql'
+import { go } from '@codemirror/lang-go'
+import { rust } from '@codemirror/lang-rust'
+import { java } from '@codemirror/lang-java'
+import { cpp } from '@codemirror/lang-cpp'
+import { php } from '@codemirror/lang-php'
+import { yaml } from '@codemirror/lang-yaml'
+import { xml } from '@codemirror/lang-xml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 import { EditorView, keymap } from '@codemirror/view'
@@ -24,7 +32,20 @@ const languageExtensions: Record<string, () => Extension> = {
   html: () => html(),
   css: () => css(),
   json: () => json(),
-  markdown: () => markdown()
+  markdown: () => markdown(),
+  sql: () => sql(),
+  bash: () => cpp(),
+  go: () => go(),
+  rust: () => rust(),
+  java: () => java(),
+  cpp: () => cpp(),
+  csharp: () => cpp(),
+  php: () => php(),
+  ruby: () => cpp(),
+  swift: () => cpp(),
+  kotlin: () => java(),
+  yaml: () => yaml(),
+  xml: () => xml()
 }
 
 // Calm, muted syntax highlighting for LIGHT mode
@@ -258,6 +279,7 @@ export function CodeEditor({
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isFocused, setIsFocused] = React.useState(false)
   const [showLangMenu, setShowLangMenu] = React.useState(false)
+  const langMenuRef = React.useRef<HTMLDivElement>(null)
 
   const languageLabel = React.useMemo(() => {
     const match = SUPPORTED_LANGUAGES.find((item) => item.value === language)
@@ -299,6 +321,17 @@ export function CodeEditor({
         clearTimeout(copyTimeoutRef.current)
       }
     }
+  }, [])
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+        setShowLangMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const handleEditorChange = React.useCallback(
@@ -355,13 +388,14 @@ export function CodeEditor({
         <AnimatePresence>
           {showLangMenu && (
             <motion.div
+              ref={langMenuRef}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.12 }}
-              className="absolute top-full left-3 mt-1 z-50"
+              className="absolute top-full left-0 mt-1 z-50"
             >
-              <div className="bg-popover border border-border/50 rounded-lg shadow-lg overflow-hidden py-1 min-w-[140px]">
+              <div className="bg-popover border border-border/50 rounded-lg shadow-lg overflow-hidden py-1 min-w-[160px] max-h-[280px] overflow-y-auto">
                 {SUPPORTED_LANGUAGES.map((lang) => (
                   <button
                     key={lang.value}
