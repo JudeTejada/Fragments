@@ -46,13 +46,34 @@ export class TestUtils {
 
   async selectLanguage(language: string) {
     const label = LANGUAGE_LABELS[language] ?? language
-    // Click the language selector button in the editor header
-    const langButton = this.page.getByRole('button', { name: /plain text|javascript|typescript|python|html|css|markdown|json/i }).first()
-    await langButton.click()
-    await this.page.waitForTimeout(200)
-    // Select from the dropdown
-    await this.page.getByRole('button', { name: label }).click()
-    await this.page.waitForTimeout(200)
+    // Click the language selector button in CodeEditor - it contains FileCode icon + language text
+    // We look for buttons that are in the CodeEditor area (near cm-editor)
+    const allButtons = await this.page.getByRole('button').all()
+    let langButton = null
+    for (const btn of allButtons) {
+      const text = await btn.textContent()
+      // Check if this is a language selector (has language text AND is inside CodeEditor)
+      if (text && (text.includes('Plain text') || text.includes('JavaScript') || text.includes('TypeScript') ||
+          text.includes('Python') || text.includes('HTML') || text.includes('CSS') ||
+          text.includes('Markdown') || text.includes('JSON'))) {
+        // Verify it's in the CodeEditor by checking it has an img (the FileCode icon)
+        const icon = await btn.locator('img').count()
+        if (icon > 0) {
+          langButton = btn
+          break
+        }
+      }
+    }
+    if (langButton) {
+      await langButton.click()
+    }
+    // Wait for dropdown animation
+    await this.page.waitForTimeout(500)
+    // Select from the dropdown - the dropdown has absolute positioning with z-50
+    const dropdownItem = this.page.getByRole('button', { name: label })
+    await dropdownItem.waitFor({ state: 'visible', timeout: 5000 })
+    await dropdownItem.click()
+    await this.page.waitForTimeout(300)
   }
 
   async deleteSnippet() {
